@@ -1,0 +1,5 @@
+/target
+.shield/
+*.swp
+*.swo
+*~

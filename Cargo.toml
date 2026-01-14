@@ -1,0 +1,13 @@
+[package]
+name = "shield-deploy"
+version = "0.1.0"
+edition = "2024"
+authors = ["Emengkeng Juslen <emkjuslen@gmail.com>"]
+description = "Privacy-preserving Solana program deployment using ZK Compression"
+license = "MIT"
+
+[[bin]]
+name = "shield-deploy"
+path = "src/main.rs"
+
+[dependencies]
