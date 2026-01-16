@@ -3,11 +3,14 @@ use solana_client::rpc_client::RpcClient;
 use solana_loader_v3_interface::{
     instruction as bpf_loader_upgradeable,
 };
+use solana_sdk_ids::bpf_loader_upgradeable::ID as LOADER_ID;
 use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
     pubkey::Pubkey,
     signature::Signer,
     transaction::Transaction,
+    instruction::Instruction as SdkInstruction,
+    instruction::AccountMeta,
 };
 use std::str::FromStr;
 use crate::config::Config;
@@ -106,23 +109,41 @@ async fn transfer_upgrade_authority(
     // Derive ProgramData address
     let (programdata_address, _) = Pubkey::find_program_address(
         &[program_id.as_ref()],
-        &bpf_loader_upgradeable::id(),
+        &LOADER_ID,
     );
     
-    println!("    ↳ ProgramData: {}", programdata_address);
-    
+    // Convert to privacy_cash::Pubkey for the instruction builder
+    let programdata_address_pc = privacy_cash::Pubkey::from(programdata_address.to_bytes());
+    let current_authority_pc = privacy_cash::Pubkey::from(current_authority.pubkey().to_bytes());
+    let new_authority_pc = privacy_cash::Pubkey::from(new_authority.to_bytes());
+        
     // Create set_upgrade_authority instruction
     // Some(new_authority) = transfer to new_authority
     // None = make program immutable (not upgradeable)
     let set_authority_ix = bpf_loader_upgradeable::set_upgrade_authority(
-        &programdata_address,
-        &current_authority.pubkey(),
-        Some(new_authority),
+        &programdata_address_pc,
+        &current_authority_pc,
+        Some(&new_authority_pc),
     );
     
+    // Convert to solana_sdk::Instruction
+    let sdk_instruction = SdkInstruction {
+        program_id: Pubkey::from(set_authority_ix.program_id.to_bytes()),
+        accounts: set_authority_ix
+            .accounts
+            .iter()
+            .map(|acc| AccountMeta {
+                pubkey: Pubkey::from(acc.pubkey.to_bytes()),
+                is_signer: acc.is_signer,
+                is_writable: acc.is_writable,
+            })
+            .collect(),
+        data: set_authority_ix.data,
+    };
+
     let recent_blockhash = rpc_client.get_latest_blockhash()?;
     let mut transaction = Transaction::new_with_payer(
-        &[set_authority_ix],
+        &[sdk_instruction],
         Some(&current_authority.pubkey()),
     );
     transaction.sign(&[current_authority], recent_blockhash);

@@ -4,11 +4,14 @@ use solana_loader_v3_interface::{
     state::UpgradeableLoaderState,
     instruction as bpf_loader_upgradeable,
 };
+use solana_sdk_ids::bpf_loader_upgradeable::ID as LOADER_ID;
 use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
     transaction::Transaction,
+    instruction::Instruction as SdkInstruction,
+    instruction::AccountMeta,
 };
 use solana_system_interface::instruction as system_instruction;
 use std::fs;
@@ -152,18 +155,36 @@ async fn deploy_program_bpf_upgradeable(
         .get_minimum_balance_for_rent_exemption(buffer_size)
         .context("Failed to get rent exemption for buffer")?;
     
+    let deployer_pubkey_pc = privacy_cash::Pubkey::from(deployer_pubkey.to_bytes());
+    let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
+    let loader_id_pc = privacy_cash::Pubkey::from(bpf_loader_upgradeable::id().to_bytes());
+
     // Create buffer account
     let create_buffer_ix = system_instruction::create_account(
-        &deployer_pubkey,
-        &buffer_pubkey,
+        &deployer_pubkey_pc,
+        &buffer_pubkey_pc,
         buffer_lamports,
         buffer_size as u64,
-        &bpf_loader_upgradeable::id(),
+        &loader_id_pc,
     );
     
+    let sdk_instruction = SdkInstruction {
+        program_id: Pubkey::from(create_buffer_ix.program_id.to_bytes()),
+        accounts: create_buffer_ix
+            .accounts
+            .iter()
+            .map(|acc| AccountMeta {
+                pubkey: Pubkey::from(acc.pubkey.to_bytes()),
+                is_signer: acc.is_signer,
+                is_writable: acc.is_writable,
+            })
+            .collect(),
+        data: create_buffer_ix.data,
+    };
+
     let recent_blockhash = rpc_client.get_latest_blockhash()?;
     let mut transaction = Transaction::new_with_payer(
-        &[create_buffer_ix],
+        &[sdk_instruction],
         Some(&deployer_pubkey),
     );
     transaction.sign(&[deployer, &buffer_keypair], recent_blockhash);
@@ -198,24 +219,44 @@ async fn deploy_program_bpf_upgradeable(
     // Derive ProgramData address
     let (programdata_address, _) = Pubkey::find_program_address(
         &[program_id.as_ref()],
-        &bpf_loader_upgradeable::id(),
+        &LOADER_ID,
     );
     
+    let deployer_pubkey_pc = privacy_cash::Pubkey::from(deployer_pubkey.to_bytes());
+    let programdata_address_pc = privacy_cash::Pubkey::from(programdata_address.to_bytes());
+    let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
+    let program_id_pc = privacy_cash::Pubkey::from(program_id.to_bytes());
+
+
     // Deploy with upgradeable loader
     let deploy_ix = bpf_loader_upgradeable::deploy_with_max_program_len(
-        &deployer_pubkey,
-        &programdata_address,
-        &buffer_pubkey,
-        &program_id,
-        // &deployer_pubkey, // upgrade authority
+        &deployer_pubkey_pc,
+        &programdata_address_pc,
+        &buffer_pubkey_pc,
+        &program_id_pc,
         programdata_lamports,
-        program_data_len * 2, // max_data_len (allowed for future growth)
+        program_data_len * 2, // max_data_len
     )
     .context("Failed to create deploy instruction")?;
     
+    // Convert to solana_sdk::Instruction
+    let sdk_instruction = SdkInstruction {
+        program_id: Pubkey::from(deploy_ix.program_id.to_bytes()),
+        accounts: deploy_ix
+            .accounts
+            .iter()
+            .map(|acc| AccountMeta {
+                pubkey: Pubkey::from(acc.pubkey.to_bytes()),
+                is_signer: acc.is_signer,
+                is_writable: acc.is_writable,
+            })
+            .collect(),
+        data: deploy_ix.data,
+    };
+
     let recent_blockhash = rpc_client.get_latest_blockhash()?;
     let mut transaction = Transaction::new_with_payer(
-        &[deploy_ix],
+        &[sdk_instruction],
         Some(&deployer_pubkey),
     );
     transaction.sign(&[deployer, program_keypair], recent_blockhash);
@@ -237,10 +278,10 @@ async fn deploy_program_bpf_upgradeable(
 async fn write_program_data_to_buffer(
     rpc_client: &RpcClient,
     deployer: &Keypair,
-    buffer_pubkey: Pubkey,
+    buffer_pubkey: &Pubkey,
     program_data: &[u8],
 ) -> Result<()> {
-    let chunk_size = 900; // Safe size per transaction (tx limit is ~1232 bytes)
+    let chunk_size = 900;
     let total_chunks = (program_data.len() + chunk_size - 1) / chunk_size;
     
     println!("  ↳ Writing {} bytes in {} chunks", program_data.len(), total_chunks);
@@ -248,17 +289,35 @@ async fn write_program_data_to_buffer(
     for (chunk_index, chunk) in program_data.chunks(chunk_size).enumerate() {
         let offset = chunk_index * chunk_size;
         
-        // Create write instruction
+        // Convert to privacy_cash::Pubkey
+        let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
+        let deployer_pubkey_pc = privacy_cash::Pubkey::from(deployer.pubkey().to_bytes());
+        
         let write_ix = bpf_loader_upgradeable::write(
-            &buffer_pubkey,
-            &deployer.pubkey(),
+            &buffer_pubkey_pc,
+            &deployer_pubkey_pc,
             offset as u32,
             chunk.to_vec(),
         );
         
+        // Convert to solana_sdk::Instruction
+        let sdk_instruction = SdkInstruction {
+            program_id: Pubkey::from(write_ix.program_id.to_bytes()),
+            accounts: write_ix
+                .accounts
+                .iter()
+                .map(|acc| AccountMeta {
+                    pubkey: Pubkey::from(acc.pubkey.to_bytes()),
+                    is_signer: acc.is_signer,
+                    is_writable: acc.is_writable,
+                })
+                .collect(),
+            data: write_ix.data,
+        };
+        
         let recent_blockhash = rpc_client.get_latest_blockhash()?;
         let mut transaction = Transaction::new_with_payer(
-            &[write_ix],
+            &[sdk_instruction],
             Some(&deployer.pubkey()),
         );
         transaction.sign(&[deployer], recent_blockhash);
@@ -267,13 +326,12 @@ async fn write_program_data_to_buffer(
             .send_and_confirm_transaction(&transaction)
             .context(format!("Failed to write chunk {} of {}", chunk_index + 1, total_chunks))?;
         
-        // Progress indicator
         if (chunk_index + 1) % 10 == 0 || chunk_index + 1 == total_chunks {
             println!("  ↳ Progress: {}/{} chunks", chunk_index + 1, total_chunks);
         }
     }
     
-    println!("  All data written successfully");
+    println!("  ✓ All data written successfully");
     
     Ok(())
 }
