@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
-use light_client::rpc::RpcConnection;
 use light_sdk::transfer::{compress_sol, decompress_sol};
-use light_client::indexer::Indexer;
+use light_client::{
+    rpc::{LightClient, LightClientConfig},
+    indexer::{Indexer, IndexerRpcConfig, RetryConfig},
+};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
@@ -45,7 +47,7 @@ impl PrivacyLayer {
             amount_lamports as f64 / 1_000_000_000.0);
 
         let signature = compress_sol(
-            &self.rpc_connection,
+            &self.rpc_client,
             from_keypair,
             amount_lamports,
         )
@@ -71,7 +73,7 @@ impl PrivacyLayer {
         println!("Decompressing to deployer...");
 
         let signature = decompress_sol(
-            &self.rpc_connection,
+            &self.rpc_client,
             to_pubkey,
             amount_lamports,
         )
@@ -86,11 +88,13 @@ impl PrivacyLayer {
     /// 
     /// Privacy depends on the anonymity set - how many other users are using the system.
     /// A larger anonymity set = better privacy.
-    pub fn check_anonymity_set(&self) -> Result<bool> {
-
+    pub async fn check_anonymity_set(&self) -> Result<bool> {
         println!("\n Checking Light Protocol anonymity set...");
 
-        let indexer = Indexer::new(&self.rpc_connection.url())
+        let mut client = LightClient::new(LightClientConfig::new(&self.rpc_client.url())).await
+            .context("Failed to create LightClient")?;
+
+        let indexer = Indexer::new(&self.rpc_client.url())
             .context("Failed to create indexer")?;
 
         let state_trees = indexer

@@ -1,16 +1,16 @@
 use anyhow::{Context, Result};
 use solana_client::rpc_client::RpcClient;
+use solana_loader_v3_interface::{
+    state::UpgradeableLoaderState,
+    instruction as bpf_loader_upgradeable,
+};
 use solana_sdk::{
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
     commitment_config::CommitmentConfig,
-    instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     signature::{Keypair, Signer},
-    system_instruction,
-    system_program,
-    sysvar,
     transaction::Transaction,
 };
+use solana_system_interface::instruction as system_instruction;
 use std::fs;
 use std::path::PathBuf;
 use crate::config::{Config, DeployedProgram};
@@ -207,7 +207,7 @@ async fn deploy_program_bpf_upgradeable(
         &programdata_address,
         &buffer_pubkey,
         &program_id,
-        &deployer_pubkey, // upgrade authority
+        // &deployer_pubkey, // upgrade authority
         programdata_lamports,
         program_data_len * 2, // max_data_len (allowed for future growth)
     )
@@ -237,7 +237,7 @@ async fn deploy_program_bpf_upgradeable(
 async fn write_program_data_to_buffer(
     rpc_client: &RpcClient,
     deployer: &Keypair,
-    buffer_pubkey: &Pubkey,
+    buffer_pubkey: Pubkey,
     program_data: &[u8],
 ) -> Result<()> {
     let chunk_size = 900; // Safe size per transaction (tx limit is ~1232 bytes)
@@ -250,7 +250,7 @@ async fn write_program_data_to_buffer(
         
         // Create write instruction
         let write_ix = bpf_loader_upgradeable::write(
-            buffer_pubkey,
+            &buffer_pubkey,
             &deployer.pubkey(),
             offset as u32,
             chunk.to_vec(),
