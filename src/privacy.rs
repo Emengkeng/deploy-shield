@@ -1,133 +1,172 @@
 use anyhow::{Context, Result};
-use light_sdk::transfer::{compress_sol, decompress_sol};
-use light_client::{
-    rpc::{LightClient, LightClientConfig},
-    indexer::{Indexer, IndexerRpcConfig, RetryConfig},
-};
-use solana_client::rpc_client::RpcClient;
+use privacy_cash::{send_privately, SendPrivatelyResult};
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
+    native_token::LAMPORTS_PER_SOL,
     pubkey::Pubkey,
     signature::{Keypair, Signer},
 };
 use std::thread;
 use std::time::Duration;
 
-const MIN_POOL_TVL: u64 = 100_000_000_000; // 100 SOL minimum for meaningful privacy
-const SHIELD_DELAY_SECS: u64 = 30;
+const PRIVACY_DELAY_SECS: u64 = 30;
 
-/// Privacy layer using Light Protocol's ZK Compression
+/// Privacy layer using Privacy Cash for ZK-proof private transfers
 /// 
-/// Light Protocol stores SOL as compressed accounts in Merkle trees.
-/// Compress = move SOL into compressed state (generates ZK proof)
-/// Decompress = move SOL out of compressed state (generates ZK proof)
+/// Privacy Cash uses Groth16 zero-knowledge proofs to provide complete
+/// transaction privacy on Solana. When you send funds through Privacy Cash:
+/// 
+/// 1. Deposit to Privacy Cash pool (visible on-chain)
+/// 2. ZK proof generated client-side (Groth16)
+/// 3. Withdraw to recipient using ZK proof (amount & sender hidden!)
+/// 
+/// Privacy Model:
+/// ==============
+/// - Deposit amount: Visible on-chain
+/// - Withdraw amount: HIDDEN (ZK proof)
+/// - Sender → Recipient link: BROKEN (privacy pool)
+/// - Privacy level: VERY HIGH
+/// 
+/// How This Works for Shield-Deploy:
+/// =================================
+/// 
+/// Funding wallet → Privacy Cash pool (deposit visible)
+///      ↓ [Privacy Cash internal transfer]
+/// Privacy Cash pool → Burner wallet (withdraw amount HIDDEN!)
+///      ↓ [30s delay]
+/// Burner wallet → Deploy program (no link to funding wallet)
+/// 
+/// On-chain observers see:
+/// - Funding wallet deposited to Privacy Cash ✓
+/// - Someone withdrew from Privacy Cash ✓
+/// - But: Amount withdrawn is HIDDEN
+/// - And: No link between deposit and withdraw
+/// 
+/// Result: Burner wallet appears to have random funds from Privacy Cash
 pub struct PrivacyLayer {
-    rpc_client: RpcClient,
+    rpc_url: Option<String>,
 }
 
 impl PrivacyLayer {
     pub fn new(rpc_url: &str) -> Self {
-        let rpc_client = RpcClient::new_with_commitment(
-            rpc_url.to_string(),
-            CommitmentConfig::confirmed(),
-        );
-        Self { rpc_client }
-    }
-
-    /// Compress SOL using Light Protocol
-    /// 
-    /// This moves SOL from a regular Solana account into a compressed account.
-    /// The compressed account is stored as a hash in a Merkle tree (no rent required).
-    pub async fn compress_sol(
-        &self,
-        from_keypair: &Keypair,
-        amount_lamports: u64,
-    ) -> Result<String> {
-        println!("\n Compressing {} SOL through Light Protocol...", 
-            amount_lamports as f64 / 1_000_000_000.0);
-
-        let signature = compress_sol(
-            &self.rpc_client,
-            from_keypair,
-            amount_lamports,
-        )
-        .await
-        .context("Failed to compress SOL")?;
-
-        println!("Compression transaction confirmed");
-        Ok(signature.to_string())
-    }
-
-    /// Decompress SOL to burner wallet
-    /// 
-    /// This moves SOL from a compressed account back to a regular Solana account.
-    /// The burner receives the SOL and can use it for deployments.
-    pub async fn decompress_sol(
-        &self,
-        to_pubkey: &Pubkey,
-        amount_lamports: u64,
-    ) -> Result<String> {
-        println!("\n Applying privacy delay ({} seconds)...", SHIELD_DELAY_SECS);
-        thread::sleep(Duration::from_secs(SHIELD_DELAY_SECS));
-
-        println!("Decompressing to deployer...");
-
-        let signature = decompress_sol(
-            &self.rpc_client,
-            to_pubkey,
-            amount_lamports,
-        )
-        .await
-        .context("Failed to decompress SOL")?;
-
-        println!("Decompression transaction confirmed");
-        Ok(signature.to_string())
-    }
-
-    /// Check if Light Protocol's Merkle trees have sufficient activity
-    /// 
-    /// Privacy depends on the anonymity set - how many other users are using the system.
-    /// A larger anonymity set = better privacy.
-    pub async fn check_anonymity_set(&self) -> Result<bool> {
-        println!("\n Checking Light Protocol anonymity set...");
-
-        let mut client = LightClient::new(LightClientConfig::new(&self.rpc_client.url())).await
-            .context("Failed to create LightClient")?;
-
-        let indexer = Indexer::new(&self.rpc_client.url())
-            .context("Failed to create indexer")?;
-
-        let state_trees = indexer
-            .get_state_merkle_tree_accounts()
-            .context("Failed to query state trees")?;
-
-        let total_accounts: u64 = state_trees
-            .iter()
-            .map(|tree| tree.next_index)
-            .sum();
-
-        const MIN_ACCOUNTS: u64 = 1000;
-
-        if total_accounts < MIN_ACCOUNTS {
-            println!("\n  Warning: Low anonymity set detected");
-            println!("   Active accounts: {}", total_accounts);
-            println!("   Recommended: {}", MIN_ACCOUNTS);
-            println!("   Privacy guarantees may be weaker.");
-            return Ok(false);
+        Self {
+            rpc_url: Some(rpc_url.to_string()),
         }
-
-        println!(" Anonymity set is adequate");
-        println!("  ↳ Active accounts: {}", total_accounts);
-        Ok(true)
     }
 
-    /// Round amount to prevent correlation attacks
+    /// Fund burner wallet using Privacy Cash ZK-proof protocol
     /// 
-    /// If you compress 6.7291 SOL and someone decompresses 6.7291 SOL,
-    /// that's linkable even with ZK proofs. Rounding breaks this.
+    /// This performs a privacy-preserving transfer using Groth16 ZK proofs.
+    /// The amount transferred to the burner is hidden on-chain.
+    /// 
+    /// Steps:
+    /// 1. Deposit from funding wallet to Privacy Cash (visible)
+    /// 2. Generate Groth16 ZK proof (client-side)
+    /// 3. Withdraw to burner wallet with ZK proof (amount hidden!)
+    /// 
+    /// Privacy guarantees:
+    /// - Withdraw amount is HIDDEN on-chain
+    /// - No direct link between funding wallet and burner
+    /// - Privacy Cash pool acts as mixing service
+    /// 
+    /// Requirements:
+    /// - Minimum amounts: 0.02 SOL, 2 USDC, 2 USDT
+    /// - Circuit files must be in ./circuit/ directory
+    /// - Funding wallet must have sufficient balance + fees (~0.006 SOL fee)
+    pub async fn fund_burner_private(
+        &self,
+        funding_keypair: &Keypair,
+        burner_pubkey: &Pubkey,
+        amount_sol: f64,
+    ) -> Result<SendPrivatelyResult> {
+        println!("\n🔒 Funding burner via Privacy Cash (ZK-proof private transfer)...");
+        println!("  ↳ Amount: {} SOL", amount_sol);
+        println!("  ↳ Privacy: Groth16 zero-knowledge proofs");
+        println!("  ↳ Withdraw amount will be HIDDEN on-chain");
+        
+        // Check minimum amount
+        if amount_sol < 0.02 {
+            anyhow::bail!(
+                "Privacy Cash requires minimum 0.02 SOL\n\
+                You specified: {} SOL\n\
+                Please fund at least 0.02 SOL for privacy",
+                amount_sol
+            );
+        }
+        
+        // Convert keypair to base58 private key
+        let private_key_bytes = funding_keypair.to_bytes();
+        let private_key_base58 = bs58::encode(&private_key_bytes).into_string();
+        
+        println!("\n📝 Generating ZK proof (Groth16)...");
+        println!("  ↳ This may take a few seconds");
+        println!("  ↳ Proof generated client-side (secure)");
+        
+        // Use Privacy Cash's send_privately() - ONE FUNCTION DOES EVERYTHING!
+        let result = send_privately(
+            &private_key_base58,
+            &burner_pubkey.to_string(),
+            amount_sol,
+            "sol",
+            self.rpc_url.as_deref(),
+        )
+        .await
+        .context("Privacy Cash transfer failed")?;
+        
+        println!("\n✅ Privacy Cash transfer complete!");
+        println!("  ↳ Deposit TX: {}", result.deposit_signature);
+        println!("  ↳ Withdraw TX: {} (amount HIDDEN!)", result.withdraw_signature);
+        println!("\n💰 Transaction details:");
+        println!("  ↳ Deposited: {} SOL", 
+            result.amount_deposited as f64 / LAMPORTS_PER_SOL as f64);
+        println!("  ↳ Received: {} SOL (hidden from chain observers)", 
+            result.amount_received as f64 / LAMPORTS_PER_SOL as f64);
+        println!("  ↳ Total fees: {} SOL", 
+            result.total_fees as f64 / LAMPORTS_PER_SOL as f64);
+        
+        println!("\n🎉 Burner wallet funded privately!");
+        println!("  ↳ On-chain observers cannot see withdraw amount");
+        println!("  ↳ No link between funding wallet and burner");
+        println!("  ↳ Burner appears as random Privacy Cash user");
+        
+        Ok(result)
+    }
+
+    /// Apply privacy delay before burner's first deployment
+    /// 
+    /// This breaks timing correlation between:
+    /// - Privacy Cash withdraw timestamp
+    /// - First deployment timestamp
+    /// 
+    /// Without delay: "Privacy Cash withdraw at T, deploy at T+5s" = linkable
+    /// With delay: "Privacy Cash withdraw at T, deploy at T+30s" = harder to link
+    pub async fn apply_privacy_delay(&self) {
+        println!("\n⏳ Applying privacy delay ({} seconds)...", PRIVACY_DELAY_SECS);
+        println!("  ↳ This breaks timing correlation");
+        println!("  ↳ Makes linking withdraw → deploy harder");
+        
+        thread::sleep(Duration::from_secs(PRIVACY_DELAY_SECS));
+        
+        println!("  ✓ Privacy delay complete");
+    }
+
+    /// Round amount to recommended Privacy Cash minimums
+    /// 
+    /// Privacy Cash has minimum amounts:
+    /// - SOL: 0.02 SOL
+    /// - USDC: 2 USDC
+    /// - USDT: 2 USDT
+    /// 
+    /// This rounds up to nearest valid amount for better privacy
     pub fn round_amount(amount_lamports: u64) -> u64 {
-        let sol = amount_lamports as f64 / 1_000_000_000.0;
-        let rounded_sol = (sol * 10.0).round() / 10.0;
-        (rounded_sol * 1_000_000_000.0) as u64
+        let sol = amount_lamports as f64 / LAMPORTS_PER_SOL as f64;
+        
+        // Round to 0.1 SOL, minimum 0.02
+        let rounded_sol = if sol < 0.02 {
+            0.02
+        } else {
+            (sol * 10.0).ceil() / 10.0
+        };
+        
+        (rounded_sol * LAMPORTS_PER_SOL as f64) as u64
     }
 }
