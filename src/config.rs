@@ -77,7 +77,7 @@ impl Config {
         
         let data: DeployerKeypair = serde_json::from_str(&json)?;
         
-        let keypair = Keypair::from_bytes(&data.keypair)
+        let keypair = Keypair::try_from(data.keypair.as_slice())
             .map_err(|e| anyhow::anyhow!("Invalid keypair: {}", e))?;
         
         Ok(keypair)
