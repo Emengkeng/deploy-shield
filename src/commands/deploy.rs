@@ -4,8 +4,8 @@ use solana_loader_v3_interface::{
     state::UpgradeableLoaderState,
     instruction as bpf_loader_upgradeable,
 };
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
     pubkey::Pubkey,
     signature::{Keypair, Signer},
     transaction::Transaction,
