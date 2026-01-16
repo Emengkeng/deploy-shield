@@ -1,5 +1,8 @@
 use anyhow::{Context, Result};
 use solana_client::rpc_client::RpcClient;
+use solana_sdk::{
+    signer::Signer
+};
 use solana_commitment_config::CommitmentConfig;
 use crate::config::Config;
 use crate::utils::*;
