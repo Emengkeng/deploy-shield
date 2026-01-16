@@ -157,15 +157,15 @@ async fn deploy_program_bpf_upgradeable(
     
     let deployer_pubkey_pc = privacy_cash::Pubkey::from(deployer_pubkey.to_bytes());
     let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
-    let loader_id_pc = privacy_cash::Pubkey::from(bpf_loader_upgradeable::id().to_bytes());
+    // let loader_id_pc = privacy_cash::Pubkey::from(bpf_loader_upgradeable::id().to_bytes());
 
     // Create buffer account
     let create_buffer_ix = system_instruction::create_account(
-        &deployer_pubkey_pc,
-        &buffer_pubkey_pc,
+        &deployer_pubkey,
+        &buffer_pubkey,
         buffer_lamports,
         buffer_size as u64,
-        &loader_id_pc,
+        &LOADER_ID,
     );
     
     let sdk_instruction = SdkInstruction {
@@ -237,7 +237,7 @@ async fn deploy_program_bpf_upgradeable(
         programdata_lamports,
         program_data_len * 2, // max_data_len
     )
-    .context("Failed to create deploy instruction")?;
+        .context("Failed to create deploy instruction")?;
     
     // Convert to solana_sdk::Instruction
     let sdk_instruction = SdkInstruction {
