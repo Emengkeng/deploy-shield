@@ -1,13 +1,14 @@
 use anyhow::{Context, Result};
 use solana_client::rpc_client::RpcClient;
-use solana_loader_v3_interface::{
-    instruction as bpf_loader_upgradeable,
-};
+use solana_loader_v3_interface::instruction as bpf_loader_upgradeable;
+use solana_sdk_ids::bpf_loader_upgradeable::ID as LOADER_ID;
 use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
-    pubkey::Pubkey,
-    signature::{Keypair, Signer},
+    pubkey::Pubkey, 
+    signature::{Keypair, Signer}, 
     transaction::Transaction,
+    instruction::Instruction as SdkInstruction,
+    instruction::AccountMeta,
 };
 use std::str::FromStr;
 use crate::config::Config;
@@ -44,12 +45,12 @@ pub async fn execute() -> Result<()> {
     
     let new_deployer = Keypair::new();
     
-    println!("\n New deployer generated");
+    println!("\n✓ New deployer generated");
     println!("  ↳ New deployer pubkey: {}", new_deployer.pubkey());
     
     // Check if any programs need authority transfer
     if !state.deployed_programs.is_empty() {
-        println!("\n Transferring upgrade authority...");
+        println!("\n⏳ Transferring upgrade authority...");
         
         let rpc_url = get_rpc_url()?;
         let rpc_client = RpcClient::new_with_commitment(
@@ -99,22 +100,43 @@ async fn transfer_upgrade_authority(
     program_id: &Pubkey,
     new_authority: &Pubkey,
 ) -> Result<()> {
+    
     // Derive ProgramData address
     let (programdata_address, _) = Pubkey::find_program_address(
         &[program_id.as_ref()],
-        &bpf_loader_upgradeable::id(),
+        &LOADER_ID,
     );
     
-    // Create set_upgrade_authority instruction
+    // Convert to privacy_cash::Pubkey for the instruction builder
+    let programdata_address_pc = privacy_cash::Pubkey::from(programdata_address.to_bytes());
+    let current_authority_pubkey_pc = privacy_cash::Pubkey::from(current_authority.pubkey().to_bytes());
+    let new_authority_pubkey_pc = privacy_cash::Pubkey::from(new_authority.to_bytes());
+    
+    // Create set_upgrade_authority instruction (returns privacy_cash::Instruction)
     let set_authority_ix = bpf_loader_upgradeable::set_upgrade_authority(
-        &programdata_address,
-        &current_authority.pubkey(),
-        Some(new_authority),
+        &programdata_address_pc,
+        &current_authority_pubkey_pc,
+        Some(&new_authority_pubkey_pc),
     );
+    
+    // Convert to solana_sdk::Instruction for the transaction
+    let sdk_instruction = SdkInstruction {
+        program_id: Pubkey::from(set_authority_ix.program_id.to_bytes()),
+        accounts: set_authority_ix
+            .accounts
+            .iter()
+            .map(|acc| AccountMeta {
+                pubkey: Pubkey::from(acc.pubkey.to_bytes()),
+                is_signer: acc.is_signer,
+                is_writable: acc.is_writable,
+            })
+            .collect(),
+        data: set_authority_ix.data,
+    };
     
     let recent_blockhash = rpc_client.get_latest_blockhash()?;
     let mut transaction = Transaction::new_with_payer(
-        &[set_authority_ix],
+        &[sdk_instruction],
         Some(&current_authority.pubkey()),
     );
     transaction.sign(&[current_authority], recent_blockhash);
