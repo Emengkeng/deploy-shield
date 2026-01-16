@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
 use solana_client::rpc_client::RpcClient;
+use solana_loader_v3_interface::{
+    instruction as bpf_loader_upgradeable,
+};
 use solana_sdk::{
-    bpf_loader_upgradeable,
     commitment_config::CommitmentConfig,
     pubkey::Pubkey,
     signature::Signer,

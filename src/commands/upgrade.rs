@@ -1,13 +1,16 @@
 use anyhow::{Context, Result};
 use solana_client::rpc_client::RpcClient;
+use solana_loader_v3_interface::{
+    state::UpgradeableLoaderState,
+    instruction as bpf_loader_upgradeable,
+};
 use solana_sdk::{
-    bpf_loader_upgradeable::{self, UpgradeableLoaderState},
     commitment_config::CommitmentConfig,
     pubkey::Pubkey,
     signature::{Keypair, Signer},
-    system_instruction,
     transaction::Transaction,
 };
+use solana_system_interface::instruction as system_instruction;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;

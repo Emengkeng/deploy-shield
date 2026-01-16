@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.100"
+bs58 = "0.5"
 chrono = "0.4.43"
 clap = "4.5.54"
 dialoguer = "0.12.0"
@@ -19,20 +20,25 @@ light-client = "0.17.2"
 light-hasher = "5.0.0"
 light-program-test = "0.17.1"
 light-sdk = { version = "0.17.1", features = ["anchor", "v2", "cpi-context"] }
+privacy-cash = { git = "https://github.com/NovaShieldWallet/privacy-cash-rust-sdk" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-solana-cli-config = "3.1.6"
-solana-client = "3.1.6"
-solana-program = "3.0.0"
-solana-sdk = { version = "3.0.0", features = ["full"] }
-solana-system-interface = { version = "3.0.0", features = ["bincode"] }
-solana-loader-v3-interface = { version = "3.0.0", features = ["bincode"] }
+solana-cli-config = "2.0"
+solana-client = "2.0"
+solana-program = "2.0"
+solana-sdk = { version = "2.0", features = ["full"] }
+solana-system-interface = { version = "2.0", features = ["bincode"] }
+solana-loader-v3-interface = { version = "2.0", features = ["bincode"] }
 tokio = { version = "1.49.0", features = ["full"] }
 
 [dev-dependencies]
 tempfile = "3.24.0"
 
+
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
+
+[patch.'https://github.com/NovaShieldWallet/privacy-cash-rust-sdk']
+ark-circom = { git = "https://github.com/gakonst/ark-circom", branch = "master", features = ["circom-2"] }
