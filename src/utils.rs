@@ -13,7 +13,7 @@ pub fn prompt_confirmation(message: &str) -> Result<bool> {
 }
 
 pub fn prompt_amount(message: &str) -> Result<f64> {
-    Input::with_theme(&ColorfulTheme::default())
+    let input: String = Input::with_theme(&ColorfulTheme::default())
         .with_prompt(message)
         .validate_with(|input: &String| -> Result<(), &str> {
             match input.parse::<f64>() {
@@ -22,7 +22,10 @@ pub fn prompt_amount(message: &str) -> Result<f64> {
             }
         })
         .interact_text()
-        .context("Failed to get amount")
+        .context("Failed to get amount")?;
+    
+    input.parse::<f64>()
+        .context("Failed to parse amount")
 }
 
 pub enum FundingWalletChoice {
@@ -64,18 +67,18 @@ pub fn load_funding_keypair(choice: FundingWalletChoice) -> Result<Keypair> {
                 .context("Failed to load Solana CLI config")?;
             
             read_keypair_file(&config.keypair_path)
-                .context("Failed to read CLI wallet keypair")
+                .map_err(|e| anyhow::anyhow!("Failed to read CLI wallet keypair: {}", e))
         }
         FundingWalletChoice::KeypairFile(path) => {
             read_keypair_file(&path)
-                .context("Failed to read keypair file")
+                .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {}", e))
         }
     }
 }
 
 pub fn get_rpc_url() -> Result<String> {
     // Try to get from Solana CLI config
-    if let Ok(config_file) = CONFIG_FILE.as_ref() {
+    if let Some(config_file) = CONFIG_FILE.as_ref() {
         if let Ok(config) = SolanaConfig::load(config_file) {
             return Ok(config.json_rpc_url);
         }
