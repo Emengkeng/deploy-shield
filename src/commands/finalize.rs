@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use solana_client::rpc_client::RpcClient;
 use solana_loader_v3_interface::{
     instruction as bpf_loader_upgradeable,
+    state::UpgradeableLoaderState,
 };
 use solana_sdk_ids::bpf_loader_upgradeable::ID as LOADER_ID;
 use solana_commitment_config::CommitmentConfig;
@@ -188,18 +189,18 @@ async fn verify_current_authority(
         .get_account(programdata_address)
         .context("ProgramData account not found")?;
     
-    let programdata_state = bincode::deserialize::<
-        solana_loader_v3_interface::state::UpgradeableLoaderState
-    >(&account.data)
-    .context("Failed to deserialize ProgramData")?;
+    let programdata_state: UpgradeableLoaderState = bincode::deserialize(&account.data)
+        .context("Failed to deserialize ProgramData")?;
     
     match programdata_state {
-        solana_loader_v3_interface::state::UpgradeableLoaderState::ProgramData {
+        UpgradeableLoaderState::ProgramData {
             upgrade_authority_address,
             slot: _,
         } => {
             if let Some(authority) = upgrade_authority_address {
-                if authority == expected_authority.pubkey() {
+                let expected_pubkey = expected_authority.pubkey();
+                
+                if authority.to_bytes() == expected_pubkey.to_bytes() {
                     println!("  ✓ Authority verified: you control this program");
                     Ok(())
                 } else {
@@ -208,7 +209,7 @@ async fn verify_current_authority(
                         Expected: {}\n\
                         Found: {}\n\
                         You do not control this program.",
-                        expected_authority.pubkey(),
+                        expected_pubkey,
                         authority
                     )
                 }
@@ -229,13 +230,11 @@ async fn verify_immutable(
         .get_account(programdata_address)
         .context("ProgramData account not found")?;
     
-    let programdata_state = bincode::deserialize::<
-        solana_loader_v3_interface::state::UpgradeableLoaderState
-    >(&account.data)
-    .context("Failed to deserialize ProgramData")?;
+    let programdata_state: UpgradeableLoaderState = bincode::deserialize(&account.data)
+        .context("Failed to deserialize ProgramData")?;
     
     match programdata_state {
-        solana_loader_v3_interface::state::UpgradeableLoaderState::ProgramData {
+        UpgradeableLoaderState::ProgramData {
             upgrade_authority_address,
             slot: _,
         } => {
