@@ -189,12 +189,12 @@ async fn verify_current_authority(
         .context("ProgramData account not found")?;
     
     let programdata_state = bincode::deserialize::<
-        solana_sdk::bpf_loader_upgradeable::UpgradeableLoaderState
+        solana_loader_v3_interface::state::UpgradeableLoaderState
     >(&account.data)
     .context("Failed to deserialize ProgramData")?;
     
     match programdata_state {
-        solana_sdk::bpf_loader_upgradeable::UpgradeableLoaderState::ProgramData {
+        solana_loader_v3_interface::state::UpgradeableLoaderState::ProgramData {
             upgrade_authority_address,
             slot: _,
         } => {
@@ -230,12 +230,12 @@ async fn verify_immutable(
         .context("ProgramData account not found")?;
     
     let programdata_state = bincode::deserialize::<
-        solana_sdk::bpf_loader_upgradeable::UpgradeableLoaderState
+        solana_loader_v3_interface::state::UpgradeableLoaderState
     >(&account.data)
     .context("Failed to deserialize ProgramData")?;
     
     match programdata_state {
-        solana_sdk::bpf_loader_upgradeable::UpgradeableLoaderState::ProgramData {
+        solana_loader_v3_interface::state::UpgradeableLoaderState::ProgramData {
             upgrade_authority_address,
             slot: _,
         } => {

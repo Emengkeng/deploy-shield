@@ -5082,6 +5082,7 @@ name = "shield-deploy"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "bs58",
  "chrono",
  "clap 4.5.54",
