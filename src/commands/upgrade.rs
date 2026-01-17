@@ -264,7 +264,7 @@ async fn verify_upgrade_authority(
             slot: _,
         } => {
             if let Some(authority) = upgrade_authority_address {
-                if authority == *expected_authority {
+                if authority.to_bytes() == expected_authority.to_bytes() {
                     println!("  ✓ Upgrade authority verified");
                     Ok(())
                 } else {
