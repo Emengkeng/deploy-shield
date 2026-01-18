@@ -14,7 +14,7 @@ use solana_sdk::{
     instruction::AccountMeta,
 };
 use solana_system_interface::instruction as system_instruction;
-use std::{fs, path::Path};
+use std::{fs};
 use std::path::PathBuf;
 use crate::config::{Config, DeployedProgram};
 use crate::utils::*;
@@ -229,8 +229,8 @@ async fn deploy_program_bpf_upgradeable(
         .get_minimum_balance_for_rent_exemption(buffer_size)
         .context("Failed to get rent exemption for buffer")?;
     
-    let deployer_pubkey_pc = privacy_cash::Pubkey::from(deployer_pubkey.to_bytes());
-    let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
+    // let deployer_pubkey_pc = privacy_cash::Pubkey::from(deployer_pubkey.to_bytes());
+    // let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
     // let loader_id_pc = privacy_cash::Pubkey::from(bpf_loader_upgradeable::id().to_bytes());
 
     // Create buffer account
@@ -305,7 +305,7 @@ async fn deploy_program_bpf_upgradeable(
 
 
     // Deploy with upgradeable loader
-    let deploy_ix = bpf_loader_upgradeable::deploy_with_max_program_len(
+    let deploy_instructions = bpf_loader_upgradeable::deploy_with_max_program_len(
         &deployer_pubkey_pc,
         &programdata_address_pc,
         &buffer_pubkey_pc,
@@ -316,23 +316,26 @@ async fn deploy_program_bpf_upgradeable(
         .context("Failed to create deploy instruction")?;
     
     // Convert to solana_sdk::Instruction
-    let sdk_instruction = SdkInstruction {
-        program_id: Pubkey::from(deploy_ix.program_id.to_bytes()),
-        accounts: deploy_ix
-            .accounts
-            .iter()
-            .map(|acc| AccountMeta {
-                pubkey: Pubkey::from(acc.pubkey.to_bytes()),
-                is_signer: acc.is_signer,
-                is_writable: acc.is_writable,
-            })
-            .collect(),
-        data: deploy_ix.data,
-    };
+    let sdk_instructions: Vec<SdkInstruction> = deploy_instructions
+        .into_iter()
+        .map(|ix| SdkInstruction {
+            program_id: Pubkey::from(ix.program_id.to_bytes()),
+            accounts: ix
+                .accounts
+                .iter()
+                .map(|acc| AccountMeta {
+                    pubkey: Pubkey::from(acc.pubkey.to_bytes()),
+                    is_signer: acc.is_signer,
+                    is_writable: acc.is_writable,
+                })
+                .collect(),
+            data: ix.data,
+        })
+        .collect();
 
     let recent_blockhash = rpc_client.get_latest_blockhash()?;
     let mut transaction = Transaction::new_with_payer(
-        &[sdk_instruction],
+        &sdk_instructions,
         Some(&deployer_pubkey),
     );
     transaction.sign(&[deployer, program_keypair], recent_blockhash);

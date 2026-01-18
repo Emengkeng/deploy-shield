@@ -15,11 +15,9 @@ use solana_sdk::{
 };
 use solana_system_interface::instruction as system_instruction;
 use std::fs;
-use std::path::PathBuf;
 use std::str::FromStr;
 use crate::config::Config;
 use crate::utils::*;
-use crate::commands::*;
 
 const MIN_UPGRADE_BALANCE: u64 = 1_000_000_000; // 1 SOL minimum
 
@@ -157,7 +155,8 @@ async fn verify_upgrade_authority_early(
         _ => anyhow::bail!("Invalid program account"),
     };
     
-    let programdata = rpc_client.get_account(&programdata_address)
+    let programdata_address_sdk = Pubkey::from(programdata_address.to_bytes());
+    let programdata = rpc_client.get_account(&programdata_address_sdk)
         .context("ProgramData account not found - program may be closed")?;
     
     match bincode::deserialize::<UpgradeableLoaderState>(&programdata.data)? {
