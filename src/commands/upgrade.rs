@@ -255,11 +255,12 @@ pub async fn upgrade_program_bpf_upgradeable(
     
     println!("\n Writing new program data...");
     
-    write_program_data_to_buffer(
+    write_program_data_chunked(
         rpc_client,
         upgrade_authority,
         &buffer_pubkey,
         new_program_data,
+        true,
     )
     .await
     .context("Failed to write program data")?;
@@ -358,6 +359,7 @@ async fn verify_upgrade_authority(
 /// Write program data to buffer account in chunks
 /// 
 /// Same implementation as deploy, but extracted for reuse
+#[deprecated]
 async fn write_program_data_to_buffer(
     rpc_client: &RpcClient,
     authority: &Keypair,

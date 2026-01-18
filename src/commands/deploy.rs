@@ -272,14 +272,15 @@ async fn deploy_program_bpf_upgradeable(
     
     println!("\n Writing program data to buffer...");
     
-    write_program_data_to_buffer(
+    write_program_data_chunked(
         rpc_client,
         deployer,
         &buffer_pubkey,
         program_data,
+        true,
     )
-    .await
-    .context("Failed to write program data")?;
+        .await
+        .context("Failed to write program data")?;
     
     println!("\n Deploying program from buffer...");
    
@@ -356,10 +357,12 @@ async fn deploy_program_bpf_upgradeable(
     Ok(())
 }
 
+
 /// Write program data to buffer account in chunks
 /// 
 /// Large programs can't be written in a single transaction due to transaction size limits.
 /// This function writes data in chunks using bpf_loader_upgradeable::write instruction.
+#[deprecated]
 async fn write_program_data_to_buffer(
     rpc_client: &RpcClient,
     deployer: &Keypair,

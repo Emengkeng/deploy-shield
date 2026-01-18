@@ -4,7 +4,6 @@ use solana_cli_config::{Config as SolanaConfig, CONFIG_FILE};
 use solana_client::rpc_client::RpcClient;
 use solana_loader_v3_interface::{
     instruction as bpf_loader_upgradeable,
-    state::UpgradeableLoaderState,
 };use solana_sdk::{
     instruction::Instruction as SdkInstruction,
     message::AccountMeta,
@@ -137,7 +136,7 @@ pub async fn write_program_data_chunked(
         );
         transaction.sign(&[authority], recent_blockhash);
         
-        // Retry failed chunks
+        // Try to send transaction
         let result = rpc_client.send_and_confirm_transaction(&transaction);
         
         if result.is_err() {
@@ -157,9 +156,43 @@ pub async fn write_program_data_chunked(
             let offset = chunk_index * chunk_size;
             let chunk = &program_data[offset..std::cmp::min(offset + chunk_size, program_data.len())];
             
-            // Retry logic (same as above)
-            // ... 
+            let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
+            let authority_pubkey_pc = privacy_cash::Pubkey::from(authority.pubkey().to_bytes());
+            
+            let write_ix = bpf_loader_upgradeable::write(
+                &buffer_pubkey_pc,
+                &authority_pubkey_pc,
+                offset as u32,
+                chunk.to_vec(),
+            );
+            
+            let sdk_instruction = SdkInstruction {
+                program_id: Pubkey::from(write_ix.program_id.to_bytes()),
+                accounts: write_ix
+                    .accounts
+                    .iter()
+                    .map(|acc| AccountMeta {
+                        pubkey: Pubkey::from(acc.pubkey.to_bytes()),
+                        is_signer: acc.is_signer,
+                        is_writable: acc.is_writable,
+                    })
+                    .collect(),
+                data: write_ix.data,
+            };
+            
+            let recent_blockhash = rpc_client.get_latest_blockhash()?;
+            let mut transaction = Transaction::new_with_payer(
+                &[sdk_instruction],
+                Some(&authority.pubkey()),
+            );
+            transaction.sign(&[authority], recent_blockhash);
+            
+            rpc_client
+                .send_and_confirm_transaction(&transaction)
+                .context(format!("Failed to write chunk {} after retry", chunk_index + 1))?;
         }
+        
+        println!("  ✓ All failed chunks retried successfully");
     }
     
     if show_progress {
