@@ -6,8 +6,6 @@ mod config;
 mod privacy;
 mod utils;
 
-use commands::*;
-
 #[derive(Parser)]
 #[command(name = "shield-deploy")]
 #[command(about = "Privacy-preserving Solana program deployment", long_about = None)]
@@ -20,7 +18,7 @@ struct Cli {
 enum Commands {
     /// Initialize a private deployer for this project
     Init,
-    /// Fund the private deployer through ZK Compression
+    /// Fund the private deployer through Privacy Cash
     Fund,
     /// Deploy a program using the private deployer
     Deploy {
@@ -55,17 +53,17 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Init => init::execute().await,
-        Commands::Fund => fund::execute().await,
-        Commands::Deploy { program } => deploy::execute(program).await,
-        Commands::Upgrade { program } => upgrade::execute(program).await,
-        Commands::Status => status::execute().await,
-        Commands::Rotate => rotate::execute().await,
+        Commands::Init => commands::init::execute().await,
+        Commands::Fund => commands::fund::execute().await,
+        Commands::Deploy { program } => commands::deploy::execute(program).await,
+        Commands::Upgrade { program } => commands::upgrade::execute(program).await,
+        Commands::Status => commands::status::execute().await,
+        Commands::Rotate => commands::rotate::execute().await,
         Commands::TransferAuthority { new_authority } => {
-            transfer_authority::execute(new_authority).await
+            commands::transfer_authority::execute(new_authority).await
         },
         Commands::Finalize { program_id } => {
-            finalize::execute(program_id).await
+            commands::finalize::execute(program_id).await
         }
     }
 }

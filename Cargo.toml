@@ -15,7 +15,7 @@ anyhow = "1.0.100"
 bincode = "1.3.3"
 bs58 = "0.5"
 chrono = "0.4.43"
-clap = "4.5.54"
+clap = { version = "4.5.54", features = ["derive"] }
 dialoguer = "0.12.0"
 privacy-cash = { path = "/home/jussec/privacy-cash-rust-sdk" }
 serde = { version = "1.0.228", features = ["derive"] }
