@@ -1,6 +1,8 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use solana_sdk::{signature::Keypair};
+use solana_client::rpc_client::RpcClient;
+use solana_commitment_config::CommitmentConfig;
+use solana_sdk::{signature::Keypair, pubkey::Pubkey};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -35,6 +37,38 @@ impl Config {
     pub fn new() -> Result<Self> {
         let shield_dir = PathBuf::from(SHIELD_DIR);
         Ok(Self { shield_dir })
+    }
+
+    /// Validate that all deployed programs still exist and are accessible
+    pub fn validate_deployed_programs(&self) -> Result<Vec<String>> {
+        let state = self.load_state()?;
+        let mut warnings = Vec::new();
+        
+        if !state.deployed_programs.is_empty() {
+            let rpc_url = crate::utils::get_rpc_url()?;
+            let rpc_client = RpcClient::new_with_commitment(
+                rpc_url,
+                CommitmentConfig::confirmed(),
+            );
+            
+            for program in &state.deployed_programs {
+                let program_id = Pubkey::from_str(&program.program_id)?;
+                
+                match rpc_client.get_account(&program_id) {
+                    Ok(_) => {
+                        // Program exists - good
+                    }
+                    Err(_) => {
+                        warnings.push(format!(
+                            "Warning: Program {} not found on-chain (may have been closed)",
+                            program.program_id
+                        ));
+                    }
+                }
+            }
+        }
+        
+        Ok(warnings)
     }
 
     pub fn ensure_shield_dir(&self) -> Result<()> {

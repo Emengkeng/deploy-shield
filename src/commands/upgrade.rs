@@ -19,10 +19,11 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use crate::config::Config;
 use crate::utils::*;
+use crate::commands::*;
 
 const MIN_UPGRADE_BALANCE: u64 = 1_000_000_000; // 1 SOL minimum
 
-pub async fn execute(program_path: Option<String>) -> Result<()> {
+pub async fn execute(program_id_str: String) -> Result<()> {
     print_header("Upgrade Program");
     
     let config = Config::new()?;
@@ -36,6 +37,17 @@ pub async fn execute(program_path: Option<String>) -> Result<()> {
     
     let deployer = config.load_deployer()?;
     let mut state = config.load_state()?;
+
+    let program_id = Pubkey::from_str(&program_id_str)
+        .context("Invalid program ID")?;
+
+    // Verify program ownership BEFORE expensive operations
+    println!("\n Verifying upgrade authority...");
+    verify_upgrade_authority_early(
+        &get_rpc_url()?,
+        &program_id,
+        &deployer,
+    ).await?;
     
     if state.deployed_programs.is_empty() {
         anyhow::bail!(
@@ -44,15 +56,11 @@ pub async fn execute(program_path: Option<String>) -> Result<()> {
         );
     }
     
-    let program_file = if let Some(path) = program_path {
-        PathBuf::from(path)
-    } else {
-        detect_program_file()
-            .ok_or_else(|| anyhow::anyhow!(
-                "No program file found.\n\
-                Build your program first or specify with --program"
-            ))?
-    };
+    let program_file = detect_program_file()
+        .ok_or_else(|| anyhow::anyhow!(
+            "No program file found.\n\
+            Build your program first or specify with --program"
+        ))?;
     
     if !program_file.exists() {
         anyhow::bail!("Program file not found: {}", program_file.display());
@@ -123,6 +131,64 @@ pub async fn execute(program_path: Option<String>) -> Result<()> {
     Ok(())
 }
 
+/// Early verification to avoid wasting time on buffer writes
+async fn verify_upgrade_authority_early(
+    rpc_url: &str,
+    program_id: &Pubkey,
+    expected_authority: &Keypair,
+) -> Result<()> {
+    let rpc_client = RpcClient::new_with_commitment(
+        rpc_url.to_string(),
+        CommitmentConfig::confirmed(),
+    );
+    
+    let program_account = rpc_client
+        .get_account(program_id)
+        .context("Failed to fetch program account - it may not exist")?;
+    
+    if program_account.owner != LOADER_ID {
+        anyhow::bail!("Program is not an upgradeable program");
+    }
+    
+    let programdata_address = match bincode::deserialize::<UpgradeableLoaderState>(
+        &program_account.data
+    )? {
+        UpgradeableLoaderState::Program { programdata_address } => programdata_address,
+        _ => anyhow::bail!("Invalid program account"),
+    };
+    
+    let programdata = rpc_client.get_account(&programdata_address)
+        .context("ProgramData account not found - program may be closed")?;
+    
+    match bincode::deserialize::<UpgradeableLoaderState>(&programdata.data)? {
+        UpgradeableLoaderState::ProgramData {
+            upgrade_authority_address,
+            ..
+        } => {
+            match upgrade_authority_address {
+                None => anyhow::bail!(
+                    "Program is immutable (upgrade authority is None)"
+                ),
+                Some(authority) => {
+                    if authority.to_bytes() != expected_authority.pubkey().to_bytes() {
+                        anyhow::bail!(
+                            "Authority mismatch.\n\
+                            Expected: {}\n\
+                            Found: {}",
+                            expected_authority.pubkey(),
+                            authority
+                        );
+                    }
+                }
+            }
+        }
+        _ => anyhow::bail!("Invalid ProgramData account"),
+    }
+    
+    println!("  ✓ Upgrade authority verified");
+    Ok(())
+}
+
 /// Upgrade a program using BPF Loader Upgradeable
 /// 
 /// This follows the official Solana upgrade process:
@@ -130,7 +196,7 @@ pub async fn execute(program_path: Option<String>) -> Result<()> {
 /// 2. Write new program data to buffer
 /// 3. Upgrade program from buffer
 /// 4. Buffer is automatically closed
-async fn upgrade_program_bpf_upgradeable(
+pub async fn upgrade_program_bpf_upgradeable(
     rpc_client: &RpcClient,
     upgrade_authority: &Keypair,
     program_id: &Pubkey,
@@ -240,6 +306,12 @@ async fn upgrade_program_bpf_upgradeable(
         .context("Failed to upgrade program")?;
     
     println!("  ✓ Program upgraded: {}", signature);
+
+    // Get program name
+    let lib_name = get_program_lib_name()?;
+    
+    // Update IDL after successful upgrade
+    deploy_idl_if_available(program_id, &lib_name).await?;
     
     Ok(())
 }

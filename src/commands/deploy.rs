@@ -14,10 +14,11 @@ use solana_sdk::{
     instruction::AccountMeta,
 };
 use solana_system_interface::instruction as system_instruction;
-use std::fs;
+use std::{fs, path::Path};
 use std::path::PathBuf;
 use crate::config::{Config, DeployedProgram};
 use crate::utils::*;
+use crate::commands::upgrade::upgrade_program_bpf_upgradeable;
 
 const MIN_DEPLOY_BALANCE: u64 = 5_000_000_000; // 5 SOL minimum
 const MAX_PERMITTED_DATA_INCREASE: usize = 10 * 1024; // 10KB per transaction
@@ -128,6 +129,59 @@ pub async fn execute(program_path: Option<String>) -> Result<()> {
     Ok(())
 }
 
+/// Verify that a program can be deployed (doesn't exist or is upgradeable)
+fn verify_can_deploy(
+    rpc_client: &RpcClient,
+    program_id: &Pubkey,
+    upgrade_authority: &Keypair,
+) -> Result<bool> {
+    match rpc_client.get_account(program_id) {
+        Ok(account) => {
+            // Program exists - verify it's upgradeable
+            if account.owner != LOADER_ID {
+                return Err(anyhow!(
+                    "Program {} exists but is not an upgradeable program",
+                    program_id
+                ));
+            }
+
+            // Check if this is a valid program
+            match bincode::deserialize::<UpgradeableLoaderState>(&account.data) {
+                Ok(UpgradeableLoaderState::Program {
+                    programdata_address,
+                }) => {
+                    // Get ProgramData to check authority
+                    let programdata = rpc_client.get_account(&programdata_address)?;
+                    match bincode::deserialize::<UpgradeableLoaderState>(&programdata.data)? {
+                        UpgradeableLoaderState::ProgramData {
+                            upgrade_authority_address,
+                            ..
+                        } => {
+                            if upgrade_authority_address.is_none() {
+                                return Err(anyhow!(
+                                    "Program {} is immutable and cannot be upgraded",
+                                    program_id
+                                ));
+                            }
+                            if upgrade_authority_address != Some(upgrade_authority.pubkey()) {
+                                return Err(anyhow!(
+                                    "Authority mismatch. Expected {}, found {:?}",
+                                    upgrade_authority.pubkey(),
+                                    upgrade_authority_address
+                                ));
+                            }
+                            Ok(true) // Exists and can upgrade
+                        }
+                        _ => Err(anyhow!("Invalid ProgramData state")),
+                    }
+                }
+                _ => Err(anyhow!("Invalid program account")),
+            }
+        }
+        Err(_) => Ok(false), // Program doesn't exist - can deploy
+    }
+}
+
 /// Deploy a program using BPF Loader Upgradeable
 /// 
 /// This follows the official Solana deployment process:
@@ -143,6 +197,24 @@ async fn deploy_program_bpf_upgradeable(
 ) -> Result<()> {
     let program_id = program_keypair.pubkey();
     let deployer_pubkey = deployer.pubkey();
+
+    println!("\n🔍 Verifying deployment prerequisites...");
+    
+    // Check if program already exists and validate upgrade authority
+    let program_exists = verify_can_deploy(rpc_client, &program_id, deployer)?;
+    
+    if program_exists {
+        println!("  ⚠️  Program already exists - this will be an upgrade");
+        return upgrade_program_bpf_upgradeable(
+            rpc_client,
+            deployer,
+            &program_id,
+            program_data,
+        )
+        .await;
+    }
+    
+    println!("  ✓ Program does not exist - proceeding with fresh deployment");
     
     println!("\n Creating program buffer...");
     
@@ -208,10 +280,12 @@ async fn deploy_program_bpf_upgradeable(
     .context("Failed to write program data")?;
     
     println!("\n Deploying program from buffer...");
+   
     
     // Calculate program account size
     let program_data_len = program_data.len();
-    let programdata_size = UpgradeableLoaderState::size_of_programdata(program_data_len);
+    let max_data_len = program_data_len * 3;
+    let programdata_size = UpgradeableLoaderState::size_of_programdata(max_data_len);
     let programdata_lamports = rpc_client
         .get_minimum_balance_for_rent_exemption(programdata_size)
         .context("Failed to get rent exemption for program data")?;
@@ -267,6 +341,12 @@ async fn deploy_program_bpf_upgradeable(
     
     println!("  Program deployed: {}", signature);
     println!("  ↳ ProgramData address: {}", programdata_address);
+
+    // Get program name from the current directory or Cargo.toml
+    let lib_name = get_program_lib_name()?;
+    
+    // Deploy IDL if available
+    deploy_idl_if_available(&program_id, &lib_name).await?;
     
     Ok(())
 }

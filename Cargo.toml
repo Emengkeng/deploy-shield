@@ -27,6 +27,7 @@ solana-sdk = { version = "3.0.0", features = ["full"] }
 solana-system-interface = { version = "3.0.0", features = ["bincode"] }
 solana-commitment-config = "3.1"
 solana-loader-v3-interface = { version = "3.0.0", features = ["bincode"] }
+toml = "0.8"
 tokio = { version = "1.49.0", features = ["full"] }
 solana-sdk-ids = "3.1.0"
 
