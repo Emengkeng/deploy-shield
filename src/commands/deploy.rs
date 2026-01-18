@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use solana_client::rpc_client::RpcClient;
 use solana_loader_v3_interface::{
     state::UpgradeableLoaderState,
@@ -151,7 +151,8 @@ fn verify_can_deploy(
                     programdata_address,
                 }) => {
                     // Get ProgramData to check authority
-                    let programdata = rpc_client.get_account(&programdata_address)?;
+                    let programdata_address_pk = solana_sdk::pubkey::Pubkey::new_from_array(programdata_address.to_bytes());
+                    let programdata = rpc_client.get_account(&programdata_address_pk)?;
                     match bincode::deserialize::<UpgradeableLoaderState>(&programdata.data)? {
                         UpgradeableLoaderState::ProgramData {
                             upgrade_authority_address,
@@ -163,7 +164,8 @@ fn verify_can_deploy(
                                     program_id
                                 ));
                             }
-                            if upgrade_authority_address != Some(upgrade_authority.pubkey()) {
+                            let expected_authority = privacy_cash::Pubkey::from(upgrade_authority.pubkey().to_bytes());
+                            if upgrade_authority_address != Some(expected_authority) {
                                 return Err(anyhow!(
                                     "Authority mismatch. Expected {}, found {:?}",
                                     upgrade_authority.pubkey(),
