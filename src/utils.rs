@@ -6,7 +6,11 @@ use solana_loader_v3_interface::{
     instruction as bpf_loader_upgradeable,
     state::UpgradeableLoaderState,
 };use solana_sdk::{
-    instruction::Instruction as SdkInstruction, message::AccountMeta, pubkey::Pubkey, signature::{Keypair, read_keypair_file}, transaction::Transaction
+    instruction::Instruction as SdkInstruction,
+    message::AccountMeta,
+    pubkey::Pubkey,
+    signature::{Keypair, read_keypair_file, Signer},
+    transaction::Transaction
 };
 use std::path::{Path, PathBuf};
 
