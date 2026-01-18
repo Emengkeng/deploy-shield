@@ -3,7 +3,7 @@ use privacy_cash::{send_privately, SendPrivatelyResult};
 use solana_sdk::{
     native_token::LAMPORTS_PER_SOL,
     pubkey::Pubkey,
-    signature::{Keypair, Signer},
+    signature::{Keypair},
 };
 use std::thread;
 use std::time::Duration;
