@@ -28,9 +28,7 @@ enum Commands {
     },
     /// Upgrade an existing program
     Upgrade {
-        /// Path to the program .so file
-        #[arg(short, long)]
-        program: Option<String>,
+        program_id_str: String,
     },
     /// Show deployer status and balance
     Status,
@@ -56,7 +54,7 @@ async fn main() -> Result<()> {
         Commands::Init => commands::init::execute().await,
         Commands::Fund => commands::fund::execute().await,
         Commands::Deploy { program } => commands::deploy::execute(program).await,
-        Commands::Upgrade { program } => commands::upgrade::execute(program).await,
+        Commands::Upgrade { program_id_str } => commands::upgrade::execute(program_id_str).await,
         Commands::Status => commands::status::execute().await,
         Commands::Rotate => commands::rotate::execute().await,
         Commands::TransferAuthority { new_authority } => {
