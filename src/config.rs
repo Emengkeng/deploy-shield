@@ -41,6 +41,7 @@ impl Config {
     }
 
     /// Validate that all deployed programs still exist and are accessible
+    #[allow(dead_code)]
     pub fn validate_deployed_programs(&self) -> Result<Vec<String>> {
         let state = self.load_state()?;
         let mut warnings = Vec::new();
