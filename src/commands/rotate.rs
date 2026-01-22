@@ -10,6 +10,7 @@ use solana_sdk::{
     instruction::Instruction as SdkInstruction,
     instruction::AccountMeta,
 };
+use solana_pubkey::Pubkey as SolanaPubkeyV2;
 use std::str::FromStr;
 use crate::config::Config;
 use crate::utils::*;
@@ -102,21 +103,22 @@ async fn transfer_upgrade_authority(
 ) -> Result<()> {
     
     // Derive ProgramData address
+    let loader_id_sdk = Pubkey::new_from_array(LOADER_ID.to_bytes());
     let (programdata_address, _) = Pubkey::find_program_address(
         &[program_id.as_ref()],
-        &LOADER_ID,
+        &loader_id_sdk,
     );
     
     // Convert to privacy_cash::Pubkey for the instruction builder
-    let programdata_address_pc = privacy_cash::Pubkey::from(programdata_address.to_bytes());
-    let current_authority_pubkey_pc = privacy_cash::Pubkey::from(current_authority.pubkey().to_bytes());
-    let new_authority_pubkey_pc = privacy_cash::Pubkey::from(new_authority.to_bytes());
+    let programdata_v2 = SolanaPubkeyV2::new_from_array(programdata_address.to_bytes());
+    let current_authority_v2 = SolanaPubkeyV2::new_from_array(current_authority.pubkey().to_bytes());
+    let new_authority_v2 = SolanaPubkeyV2::new_from_array(new_authority.to_bytes());
     
     // Create set_upgrade_authority instruction (returns privacy_cash::Instruction)
     let set_authority_ix = bpf_loader_upgradeable::set_upgrade_authority(
-        &programdata_address_pc,
-        &current_authority_pubkey_pc,
-        Some(&new_authority_pubkey_pc),
+        &programdata_v2,
+        &current_authority_v2,
+        Some(&new_authority_v2),
     );
     
     // Convert to solana_sdk::Instruction for the transaction
