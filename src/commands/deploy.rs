@@ -14,6 +14,8 @@ use solana_sdk::{
     instruction::AccountMeta,
 };
 use solana_system_interface::instruction as system_instruction;
+use solana_pubkey::Pubkey as SolanaPubkeyV2;
+use solana_address::Address;
 use std::{fs};
 use std::path::PathBuf;
 use crate::config::{Config, DeployedProgram};
