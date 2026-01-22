@@ -98,7 +98,7 @@ pub async fn execute(program_path: Option<String>) -> Result<()> {
     let program_keypair = Keypair::new();
     let program_id = program_keypair.pubkey();
     
-    println!("  ↳ Program ID: {}", program_id);
+    println!("  ↳ Program ID: {program_id}");
     
     // Deploy program using BPF Loader Upgradeable
     deploy_program_bpf_upgradeable(
@@ -112,7 +112,7 @@ pub async fn execute(program_path: Option<String>) -> Result<()> {
     
     print_success("Program deployed");
     
-    println!("\nProgram ID:        {}", program_id);
+    println!("\nProgram ID:        {program_id}");
     println!("Upgrade authority: private deployer");
     
     let mut state = config.load_state()?;
@@ -143,8 +143,7 @@ fn verify_can_deploy(
             // Program exists - verify it's upgradeable
             if account.owner != loader_id_sdk {
                 return Err(anyhow!(
-                    "Program {} exists but is not an upgradeable program",
-                    program_id
+                    "Program {program_id} exists but is not an upgradeable program"
                 ));
             }
 
@@ -163,8 +162,7 @@ fn verify_can_deploy(
                         } => {
                             if upgrade_authority_address.is_none() {
                                 return Err(anyhow!(
-                                    "Program {} is immutable and cannot be upgraded",
-                                    program_id
+                                    "Program {program_id} is immutable and cannot be upgraded"
                                 ));
                             }
                             let expected_authority_v2 = SolanaPubkeyV2::new_from_array(upgrade_authority.pubkey().to_bytes());
@@ -270,8 +268,8 @@ async fn deploy_program_bpf_upgradeable(
         .send_and_confirm_transaction(&transaction)
         .context("Failed to create buffer account")?;
     
-    println!("  ✓ Buffer created: {}", signature);
-    println!("  ↳ Buffer address: {}", buffer_pubkey);
+    println!("  ✓ Buffer created: {signature}");
+    println!("  ↳ Buffer address: {buffer_pubkey}");
     
     println!("\n Writing program data to buffer...");
     
@@ -348,8 +346,8 @@ async fn deploy_program_bpf_upgradeable(
         .send_and_confirm_transaction_with_spinner(&transaction)
         .context("Failed to deploy program")?;
     
-    println!("  Program deployed: {}", signature);
-    println!("  ↳ ProgramData address: {}", programdata_address);
+    println!("  Program deployed: {signature}");
+    println!("  ↳ ProgramData address: {programdata_address}");
 
     // Get program name from the current directory or Cargo.toml
     let lib_name = get_program_lib_name()?;
@@ -366,6 +364,7 @@ async fn deploy_program_bpf_upgradeable(
 /// Large programs can't be written in a single transaction due to transaction size limits.
 /// This function writes data in chunks using bpf_loader_upgradeable::write instruction.
 #[deprecated]
+#[allow(dead_code)]
 async fn write_program_data_to_buffer(
     rpc_client: &RpcClient,
     deployer: &Keypair,
@@ -373,7 +372,7 @@ async fn write_program_data_to_buffer(
     program_data: &[u8],
 ) -> Result<()> {
     let chunk_size = 900;
-    let total_chunks = (program_data.len() + chunk_size - 1) / chunk_size;
+    let total_chunks = program_data.len().div_ceil(chunk_size);
     
     println!("  ↳ Writing {} bytes in {} chunks", program_data.len(), total_chunks);
     

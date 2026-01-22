@@ -113,7 +113,7 @@ impl Config {
         let data: DeployerKeypair = serde_json::from_str(&json)?;
         
         let keypair = Keypair::from_bytes(&data.keypair)
-            .map_err(|e| anyhow::anyhow!("Invalid keypair: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Invalid keypair: {e}"))?;
         
         Ok(keypair)
     }
@@ -147,7 +147,7 @@ impl Config {
         if gitignore_path.exists() {
             let content = fs::read_to_string(gitignore_path)?;
             if !content.contains(".shield") {
-                fs::write(gitignore_path, format!("{}{}", content, shield_entry))?;
+                fs::write(gitignore_path, format!("{content}{shield_entry}"))?;
             }
         } else {
             fs::write(gitignore_path, shield_entry)?;

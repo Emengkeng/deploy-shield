@@ -58,7 +58,7 @@ pub async fn execute() -> Result<()> {
                 let datetime = chrono::DateTime::from_timestamp(upgraded, 0)
                     .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
                     .unwrap_or_else(|| "unknown".to_string());
-                println!("     Last upgraded: {}", datetime);
+                println!("     Last upgraded: {datetime}");
             }
         }
     }

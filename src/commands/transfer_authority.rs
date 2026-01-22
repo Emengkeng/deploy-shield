@@ -44,7 +44,7 @@ pub async fn execute(new_authority: String) -> Result<()> {
     }
     
     println!("\nThis will transfer upgrade authority to:");
-    println!("  {}", new_authority_pubkey);
+    println!("  {new_authority_pubkey}");
     
     println!("\nFor programs:");
     for (i, program) in state.deployed_programs.iter().enumerate() {
@@ -80,14 +80,14 @@ pub async fn execute(new_authority: String) -> Result<()> {
             &new_authority_pubkey,
         )
         .await
-        .context(format!("Failed to transfer authority for {}", program_id))?;
+        .context(format!("Failed to transfer authority for {program_id}"))?;
         
-        println!("  ✓ Authority transferred for {}", program_id);
+        println!("  ✓ Authority transferred for {program_id}");
     }
     
     print_success("Authority transfer complete");
     
-    println!("\nNew upgrade authority: {}", new_authority_pubkey);
+    println!("\nNew upgrade authority: {new_authority_pubkey}");
     println!("The private deployer no longer controls these programs.");
     
     println!("\n💡 Tip:");
@@ -154,7 +154,7 @@ async fn transfer_upgrade_authority(
         .send_and_confirm_transaction(&transaction)
         .context("Failed to transfer authority")?;
     
-    println!("    ↳ Transaction: {}", signature);
+    println!("    ↳ Transaction: {signature}");
     
     Ok(())
 }
