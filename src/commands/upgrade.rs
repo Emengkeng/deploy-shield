@@ -13,6 +13,8 @@ use solana_sdk::{
     instruction::Instruction as SdkInstruction,
     instruction::AccountMeta,
 };
+use solana_address::Address;
+use solana_pubkey::Pubkey as SolanaPubkeyV2;
 use solana_system_interface::instruction as system_instruction;
 use std::fs;
 use std::str::FromStr;
@@ -144,7 +146,8 @@ async fn verify_upgrade_authority_early(
         .get_account(program_id)
         .context("Failed to fetch program account - it may not exist")?;
     
-    if program_account.owner != LOADER_ID {
+    let loader_id_sdk = Pubkey::new_from_array(LOADER_ID.to_bytes());
+    if program_account.owner != loader_id_sdk {
         anyhow::bail!("Program is not an upgradeable program");
     }
     
@@ -204,9 +207,10 @@ pub async fn upgrade_program_bpf_upgradeable(
     let authority_pubkey = upgrade_authority.pubkey();
     
     // Derive ProgramData address
+    let loader_id_sdk = Pubkey::new_from_array(LOADER_ID.to_bytes());
     let (programdata_address, _) = Pubkey::find_program_address(
         &[program_id.as_ref()],
-        &LOADER_ID,
+        &loader_id_sdk,
     );
     
     println!("  ↳ ProgramData address: {}", programdata_address);
@@ -230,19 +234,37 @@ pub async fn upgrade_program_bpf_upgradeable(
     let buffer_lamports = rpc_client
         .get_minimum_balance_for_rent_exemption(buffer_size)
         .context("Failed to get rent exemption for buffer")?;
+
+    let authority_addr = Address::from(authority_pubkey.to_bytes());
+    let buffer_addr = Address::from(buffer_pubkey.to_bytes());
+    let loader_addr = Address::from(LOADER_ID.to_bytes());
     
     // Create buffer account
     let create_buffer_ix = system_instruction::create_account(
-        &authority_pubkey,
-        &buffer_pubkey,
+        &authority_addr,
+        &buffer_addr,
         buffer_lamports,
         buffer_size as u64,
-        &LOADER_ID,
+        &loader_addr,
     );
+
+    let sdk_instruction = SdkInstruction {
+        program_id: Pubkey::from(create_buffer_ix.program_id.to_bytes()),
+        accounts: create_buffer_ix
+            .accounts
+            .iter()
+            .map(|acc| AccountMeta {
+                pubkey: Pubkey::from(acc.pubkey.to_bytes()),
+                is_signer: acc.is_signer,
+                is_writable: acc.is_writable,
+            })
+            .collect(),
+        data: create_buffer_ix.data,
+    };
     
     let recent_blockhash = rpc_client.get_latest_blockhash()?;
     let mut transaction = Transaction::new_with_payer(
-        &[create_buffer_ix],
+        &[sdk_instruction],
         Some(&authority_pubkey),
     );
     transaction.sign(&[upgrade_authority, &buffer_keypair], recent_blockhash);
@@ -268,16 +290,16 @@ pub async fn upgrade_program_bpf_upgradeable(
     println!("\n Upgrading program...");
     
     // Convert to privacy_cash::Pubkey
-    let program_id_pc = privacy_cash::Pubkey::from(program_id.to_bytes());
-    let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
-    let authority_pubkey_pc = privacy_cash::Pubkey::from(authority_pubkey.to_bytes());
+    let program_v2 = SolanaPubkeyV2::new_from_array(program_id.to_bytes());
+    let buffer_v2 = SolanaPubkeyV2::new_from_array(buffer_pubkey.to_bytes());
+    let authority_v2 = SolanaPubkeyV2::new_from_array(authority_pubkey.to_bytes());
 
 
     let upgrade_ix = bpf_loader_upgradeable::upgrade(
-        &program_id_pc,
-        &buffer_pubkey_pc,
-        &authority_pubkey_pc,
-        &authority_pubkey_pc, // spill account
+        &program_v2,
+        &buffer_v2,
+        &authority_v2,
+        &authority_v2,
     );
 
     let sdk_instruction = SdkInstruction {
@@ -375,12 +397,12 @@ async fn write_program_data_to_buffer(
         let offset = chunk_index * chunk_size;
         
         // Convert to privacy_cash::Pubkey
-        let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
-        let authority_pubkey_pc = privacy_cash::Pubkey::from(authority.pubkey().to_bytes());
+        let buffer_v2 = SolanaPubkeyV2::new_from_array(buffer_pubkey.to_bytes());
+        let authority_v2 = SolanaPubkeyV2::new_from_array(authority.pubkey().to_bytes());
         
         let write_ix = bpf_loader_upgradeable::write(
-            &buffer_pubkey_pc,
-            &authority_pubkey_pc,
+            &buffer_v2,
+            &authority_v2,
             offset as u32,
             chunk.to_vec(),
         );
