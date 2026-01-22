@@ -4,9 +4,10 @@ use solana_cli_config::{Config as SolanaConfig, CONFIG_FILE};
 use solana_client::rpc_client::RpcClient;
 use solana_loader_v3_interface::{
     instruction as bpf_loader_upgradeable,
-};use solana_sdk::{
+};
+use solana_sdk::{
     instruction::Instruction as SdkInstruction,
-    message::AccountMeta,
+    instruction::AccountMeta,
     pubkey::Pubkey,
     signature::{Keypair, read_keypair_file, Signer},
     transaction::Transaction
