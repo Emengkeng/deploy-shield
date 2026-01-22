@@ -5,14 +5,15 @@ use solana_loader_v3_interface::{
     state::UpgradeableLoaderState,
 };
 use solana_sdk_ids::bpf_loader_upgradeable::ID as LOADER_ID;
-use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
     pubkey::Pubkey,
     signature::Signer,
     transaction::Transaction,
     instruction::Instruction as SdkInstruction,
     instruction::AccountMeta,
+    commitment_config::CommitmentConfig
 };
+use solana_pubkey::Pubkey as SolanaPubkeyV2;
 use std::str::FromStr;
 use crate::config::Config;
 use crate::utils::*;
@@ -125,15 +126,13 @@ async fn finalize_program(
     program_id: &Pubkey,
 ) -> Result<()> {
     // Derive ProgramData address
+    let loader_id_sdk = Pubkey::new_from_array(LOADER_ID.to_bytes());
     let (programdata_address, _) = Pubkey::find_program_address(
         &[program_id.as_ref()],
-        &LOADER_ID,
+        &loader_id_sdk,
     );
     
     println!("  ↳ ProgramData: {}", programdata_address);
-    
-    let programdata_address_pc = privacy_cash::Pubkey::from(programdata_address.to_bytes());
-    let current_authority_pc = privacy_cash::Pubkey::from(current_authority.pubkey().to_bytes());
 
     // Verify we currently control this program
     verify_current_authority(rpc_client, &programdata_address, current_authority)
@@ -141,9 +140,12 @@ async fn finalize_program(
     
     // Create set_upgrade_authority instruction with None
     // This is THE KEY DIFFERENCE - None instead of Some(pubkey)
+    let programdata_v2 = SolanaPubkeyV2::new_from_array(programdata_address.to_bytes());
+    let current_authority_v2 = SolanaPubkeyV2::new_from_array(current_authority.pubkey().to_bytes());
+
     let set_authority_ix = bpf_loader_upgradeable::set_upgrade_authority(
-        &programdata_address_pc,
-        &current_authority_pc,
+        &programdata_v2,
+        &current_authority_v2,
         None,
     );
 
