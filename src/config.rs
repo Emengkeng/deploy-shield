@@ -41,6 +41,7 @@ impl Config {
     }
 
     /// Validate that all deployed programs still exist and are accessible
+    #[allow(dead_code)]
     pub fn validate_deployed_programs(&self) -> Result<Vec<String>> {
         let state = self.load_state()?;
         let mut warnings = Vec::new();
@@ -113,7 +114,7 @@ impl Config {
         let data: DeployerKeypair = serde_json::from_str(&json)?;
         
         let keypair = Keypair::from_bytes(&data.keypair)
-            .map_err(|e| anyhow::anyhow!("Invalid keypair: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Invalid keypair: {e}"))?;
         
         Ok(keypair)
     }
@@ -147,7 +148,7 @@ impl Config {
         if gitignore_path.exists() {
             let content = fs::read_to_string(gitignore_path)?;
             if !content.contains(".shield") {
-                fs::write(gitignore_path, format!("{}{}", content, shield_entry))?;
+                fs::write(gitignore_path, format!("{content}{shield_entry}"))?;
             }
         } else {
             fs::write(gitignore_path, shield_entry)?;

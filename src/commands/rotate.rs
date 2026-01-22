@@ -70,9 +70,9 @@ pub async fn execute() -> Result<()> {
                 &new_deployer.pubkey(),
             )
             .await
-            .context(format!("Failed to transfer authority for {}", program_id))?;
+            .context(format!("Failed to transfer authority for {program_id}"))?;
             
-            println!("  ✓ Authority transferred for {}", program_id);
+            println!("  ✓ Authority transferred for {program_id}");
         }
     } else {
         println!("\n  ↳ No deployed programs, skipping authority transfer");
@@ -147,7 +147,7 @@ async fn transfer_upgrade_authority(
         .send_and_confirm_transaction(&transaction)
         .context("Failed to transfer authority")?;
     
-    println!("    ↳ Transaction: {}", signature);
+    println!("    ↳ Transaction: {signature}");
     
     Ok(())
 }

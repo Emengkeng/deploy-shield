@@ -78,11 +78,11 @@ pub fn load_funding_keypair(choice: FundingWalletChoice) -> Result<Keypair> {
                 .context("Failed to load Solana CLI config")?;
             
             read_keypair_file(&config.keypair_path)
-                .map_err(|e| anyhow::anyhow!("Failed to read CLI wallet keypair: {}", e))
+                .map_err(|e| anyhow::anyhow!("Failed to read CLI wallet keypair: {e}"))
         }
         FundingWalletChoice::KeypairFile(path) => {
             read_keypair_file(&path)
-                .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {}", e))
+                .map_err(|e| anyhow::anyhow!("Failed to read keypair file: {e}"))
         }
     }
 }
@@ -96,7 +96,7 @@ pub async fn write_program_data_chunked(
     show_progress: bool,
 ) -> Result<()> {
     let chunk_size = calculate_max_write_chunk_size();
-    let total_chunks = (program_data.len() + chunk_size - 1) / chunk_size;
+    let total_chunks = program_data.len().div_ceil(chunk_size);
     
     if show_progress {
         println!("  ↳ Writing {} bytes in {} chunks", program_data.len(), total_chunks);
@@ -314,7 +314,7 @@ pub async fn deploy_idl_if_available(
     let idl_path = Path::new("target/idl").join(lib_name).with_extension("json");
     
     if !idl_path.exists() {
-        println!("No IDL found at {:?}, skipping IDL deployment", idl_path);
+        println!("No IDL found at {idl_path:?}, skipping IDL deployment");
         return Ok(());
     }
     
@@ -333,7 +333,7 @@ pub async fn deploy_idl_if_available(
     std::fs::write(&idl_path, serde_json::to_string_pretty(&idl)?)?;
     
     // Use anchor idl init/upgrade commands
-    println!("  ✓ IDL updated with program address: {}", program_id);
+    println!("  ✓ IDL updated with program address: {program_id}");
     
     Ok(())
 }
@@ -343,18 +343,19 @@ pub fn format_sol(lamports: u64) -> String {
 }
 
 pub fn print_header(title: &str) {
-    println!("\n{}", title);
+    println!("\n{title}");
     println!("{}", "─".repeat(title.len()));
 }
 
 pub fn print_success(message: &str) {
-    println!("\n {}", message);
+    println!("\n {message}");
 }
 
 pub fn print_warning(message: &str) {
-    println!("\n {}", message);
+    println!("\n {message}");
 }
 
+#[allow(dead_code)]
 pub fn print_error(message: &str) {
-    eprintln!("\n {}", message);
+    eprintln!("\n {message}");
 }

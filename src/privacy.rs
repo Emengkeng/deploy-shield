@@ -79,7 +79,7 @@ impl PrivacyLayer {
         amount_sol: f64,
     ) -> Result<SendPrivatelyResult> {
         println!("\n🔒 Funding burner via Privacy Cash (ZK-proof private transfer)...");
-        println!("  ↳ Amount: {} SOL", amount_sol);
+        println!("  ↳ Amount: {amount_sol} SOL");
         println!("  ↳ Privacy: Groth16 zero-knowledge proofs");
         println!("  ↳ Withdraw amount will be HIDDEN on-chain");
         
@@ -87,9 +87,8 @@ impl PrivacyLayer {
         if amount_sol < 0.02 {
             anyhow::bail!(
                 "Privacy Cash requires minimum 0.02 SOL\n\
-                You specified: {} SOL\n\
-                Please fund at least 0.02 SOL for privacy",
-                amount_sol
+                You specified: {amount_sol} SOL\n\
+                Please fund at least 0.02 SOL for privacy"
             );
         }
         
@@ -140,7 +139,7 @@ impl PrivacyLayer {
     /// Without delay: "Privacy Cash withdraw at T, deploy at T+5s" = linkable
     /// With delay: "Privacy Cash withdraw at T, deploy at T+30s" = harder to link
     pub async fn apply_privacy_delay(&self) {
-        println!("\n⏳ Applying privacy delay ({} seconds)...", PRIVACY_DELAY_SECS);
+        println!("\n⏳ Applying privacy delay ({PRIVACY_DELAY_SECS} seconds)...");
         println!("  ↳ This breaks timing correlation");
         println!("  ↳ Makes linking withdraw → deploy harder");
         

@@ -109,7 +109,7 @@ pub async fn execute(program_id_str: String) -> Result<()> {
     let program_id = Pubkey::from_str(&last_program.program_id)
         .context("Invalid program ID in state")?;
     
-    println!("  ↳ Program ID: {}", program_id);
+    println!("  ↳ Program ID: {program_id}");
     
     upgrade_program_bpf_upgradeable(
         &rpc_client,
@@ -213,7 +213,7 @@ pub async fn upgrade_program_bpf_upgradeable(
         &loader_id_sdk,
     );
     
-    println!("  ↳ ProgramData address: {}", programdata_address);
+    println!("  ↳ ProgramData address: {programdata_address}");
     
     // Verify upgrade authority
     verify_upgrade_authority(
@@ -273,7 +273,7 @@ pub async fn upgrade_program_bpf_upgradeable(
         .send_and_confirm_transaction(&transaction)
         .context("Failed to create buffer account")?;
     
-    println!("  ✓ Buffer created: {}", signature);
+    println!("  ✓ Buffer created: {signature}");
     
     println!("\n Writing new program data...");
     
@@ -327,7 +327,7 @@ pub async fn upgrade_program_bpf_upgradeable(
         .send_and_confirm_transaction_with_spinner(&transaction)
         .context("Failed to upgrade program")?;
     
-    println!("  ✓ Program upgraded: {}", signature);
+    println!("  ✓ Program upgraded: {signature}");
 
     // Get program name
     let lib_name = get_program_lib_name()?;
@@ -364,10 +364,8 @@ async fn verify_upgrade_authority(
                 } else {
                     anyhow::bail!(
                         "Upgrade authority mismatch.\n\
-                        Expected: {}\n\
-                        Found: {}",
-                        expected_authority,
-                        authority
+                        Expected: {expected_authority}\n\
+                        Found: {authority}"
                     )
                 }
             } else {
@@ -382,6 +380,7 @@ async fn verify_upgrade_authority(
 /// 
 /// Same implementation as deploy, but extracted for reuse
 #[deprecated]
+#[allow(dead_code)]
 async fn write_program_data_to_buffer(
     rpc_client: &RpcClient,
     authority: &Keypair,
@@ -389,7 +388,7 @@ async fn write_program_data_to_buffer(
     program_data: &[u8],
 ) -> Result<()> {
     let chunk_size = 900;
-    let total_chunks = (program_data.len() + chunk_size - 1) / chunk_size;
+    let total_chunks = program_data.len().div_ceil(chunk_size);
     
     println!("  ↳ Writing {} bytes in {} chunks", program_data.len(), total_chunks);
     

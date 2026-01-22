@@ -25,8 +25,7 @@ pub async fn execute() -> Result<()> {
     if amount_sol < 0.02 {
         print_warning(&format!(
             "Privacy Cash requires minimum 0.02 SOL\n\
-            You entered: {} SOL",
-            amount_sol
+            You entered: {amount_sol} SOL"
         ));
         println!("\n💡 Tip: Use at least 0.02 SOL for ZK-proof privacy");
         println!("   Or use 0.02 SOL as minimum for best privacy\n");
@@ -43,7 +42,7 @@ pub async fn execute() -> Result<()> {
     let rounded_sol = rounded_lamports as f64 / LAMPORTS_PER_SOL as f64;
     
     if rounded_lamports != amount_lamports {
-        println!("\n💡 Amount adjusted to {} SOL", rounded_sol);
+        println!("\n💡 Amount adjusted to {rounded_sol} SOL");
         println!("   (Privacy Cash minimum: 0.02 SOL)");
     }
     
@@ -86,7 +85,7 @@ pub async fn execute() -> Result<()> {
     
     println!("\n💰 Funding wallet: {}", funding_keypair.pubkey());
     println!("🎯 Burner wallet: {}", deployer.pubkey());
-    println!("💸 Amount: {} SOL", rounded_sol);
+    println!("💸 Amount: {rounded_sol} SOL");
     
     // Initialize privacy layer
     let rpc_url = get_rpc_url()?;

@@ -56,7 +56,7 @@ pub async fn execute(program_id_str: String) -> Result<()> {
     println!("  • NO ONE can add new features");
     println!("  • This operation CANNOT BE UNDONE");
     println!();
-    println!("Program ID: {}", program_id);
+    println!("Program ID: {program_id}");
     println!();
     println!("Only proceed if:");
     println!("  ✓ The program has been thoroughly audited");
@@ -74,7 +74,7 @@ pub async fn execute(program_id_str: String) -> Result<()> {
     println!();
     print_warning("FINAL CONFIRMATION");
     println!("Type the program ID to confirm finalization:");
-    println!("{}", program_id);
+    println!("{program_id}");
     println!();
     
     let confirmation: String = dialoguer::Input::new()
@@ -103,7 +103,7 @@ pub async fn execute(program_id_str: String) -> Result<()> {
     
     print_success("Program is now IMMUTABLE");
     
-    println!("\nProgram ID: {}", program_id);
+    println!("\nProgram ID: {program_id}");
     println!("Upgrade authority: None (immutable)");
     println!();
     println!("⚠️  Important:");
@@ -132,7 +132,7 @@ async fn finalize_program(
         &loader_id_sdk,
     );
     
-    println!("  ↳ ProgramData: {}", programdata_address);
+    println!("  ↳ ProgramData: {programdata_address}");
 
     // Verify we currently control this program
     verify_current_authority(rpc_client, &programdata_address, current_authority)
@@ -174,7 +174,7 @@ async fn finalize_program(
         .send_and_confirm_transaction(&transaction)
         .context("Failed to finalize program")?;
     
-    println!("  ✓ Transaction confirmed: {}", signature);
+    println!("  ✓ Transaction confirmed: {signature}");
     
     verify_immutable(rpc_client, &programdata_address).await?;
     
@@ -208,11 +208,9 @@ async fn verify_current_authority(
                 } else {
                     anyhow::bail!(
                         "Authority mismatch.\n\
-                        Expected: {}\n\
-                        Found: {}\n\
-                        You do not control this program.",
-                        expected_pubkey,
-                        authority
+                        Expected: {expected_pubkey}\n\
+                        Found: {authority}\n\
+                        You do not control this program."
                     )
                 }
             } else {
@@ -245,8 +243,7 @@ async fn verify_immutable(
                 Ok(())
             } else {
                 anyhow::bail!(
-                    "Finalization failed: authority is still set to {:?}",
-                    upgrade_authority_address
+                    "Finalization failed: authority is still set to {upgrade_authority_address:?}"
                 )
             }
         }
