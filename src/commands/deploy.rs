@@ -5,13 +5,13 @@ use solana_loader_v3_interface::{
     instruction as bpf_loader_upgradeable,
 };
 use solana_sdk_ids::bpf_loader_upgradeable::ID as LOADER_ID;
-use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::{
     pubkey::Pubkey,
     signature::{Keypair, Signer},
     transaction::Transaction,
     instruction::Instruction as SdkInstruction,
     instruction::AccountMeta,
+    commitment_config::CommitmentConfig
 };
 use solana_system_interface::instruction as system_instruction;
 use solana_pubkey::Pubkey as SolanaPubkeyV2;
