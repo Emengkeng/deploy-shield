@@ -139,8 +139,9 @@ fn verify_can_deploy(
 ) -> Result<bool> {
     match rpc_client.get_account(program_id) {
         Ok(account) => {
+            let loader_id_sdk = Pubkey::new_from_array(LOADER_ID.to_bytes());
             // Program exists - verify it's upgradeable
-            if account.owner != LOADER_ID {
+            if account.owner != loader_id_sdk {
                 return Err(anyhow!(
                     "Program {} exists but is not an upgradeable program",
                     program_id
@@ -166,8 +167,8 @@ fn verify_can_deploy(
                                     program_id
                                 ));
                             }
-                            let expected_authority = privacy_cash::Pubkey::from(upgrade_authority.pubkey().to_bytes());
-                            if upgrade_authority_address != Some(expected_authority) {
+                            let expected_authority_v2 = SolanaPubkeyV2::new_from_array(upgrade_authority.pubkey().to_bytes());
+                            if upgrade_authority_address != Some(expected_authority_v2) {
                                 return Err(anyhow!(
                                     "Authority mismatch. Expected {}, found {:?}",
                                     upgrade_authority.pubkey(),
@@ -231,17 +232,17 @@ async fn deploy_program_bpf_upgradeable(
         .get_minimum_balance_for_rent_exemption(buffer_size)
         .context("Failed to get rent exemption for buffer")?;
     
-    // let deployer_pubkey_pc = privacy_cash::Pubkey::from(deployer_pubkey.to_bytes());
-    // let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
-    // let loader_id_pc = privacy_cash::Pubkey::from(bpf_loader_upgradeable::id().to_bytes());
+    let deployer_addr = Address::from(deployer_pubkey.to_bytes());
+    let buffer_addr = Address::from(buffer_pubkey.to_bytes());
+    let loader_addr = Address::from(LOADER_ID.to_bytes());
 
     // Create buffer account
     let create_buffer_ix = system_instruction::create_account(
-        &deployer_pubkey,
-        &buffer_pubkey,
+        &deployer_addr,
+        &buffer_addr,
         buffer_lamports,
         buffer_size as u64,
-        &LOADER_ID,
+        &loader_addr,
     );
     
     let sdk_instruction = SdkInstruction {
@@ -296,27 +297,27 @@ async fn deploy_program_bpf_upgradeable(
         .context("Failed to get rent exemption for program data")?;
     
     // Derive ProgramData address
+    let loader_id_sdk = Pubkey::new_from_array(LOADER_ID.to_bytes());
     let (programdata_address, _) = Pubkey::find_program_address(
         &[program_id.as_ref()],
-        &LOADER_ID,
+        &loader_id_sdk,
     );
     
-    let deployer_pubkey_pc = privacy_cash::Pubkey::from(deployer_pubkey.to_bytes());
-    let programdata_address_pc = privacy_cash::Pubkey::from(programdata_address.to_bytes());
-    let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
-    let program_id_pc = privacy_cash::Pubkey::from(program_id.to_bytes());
+    let deployer_v2 = SolanaPubkeyV2::new_from_array(deployer_pubkey.to_bytes());
+    let programdata_v2 = SolanaPubkeyV2::new_from_array(programdata_address.to_bytes());
+    let buffer_v2 = SolanaPubkeyV2::new_from_array(buffer_pubkey.to_bytes());
+    let program_v2 = SolanaPubkeyV2::new_from_array(program_id.to_bytes());
 
 
     // Deploy with upgradeable loader
     let deploy_instructions = bpf_loader_upgradeable::deploy_with_max_program_len(
-        &deployer_pubkey_pc,
-        &programdata_address_pc,
-        &buffer_pubkey_pc,
-        &program_id_pc,
+        &deployer_v2,
+        &programdata_v2,
+        &buffer_v2,
+        &program_v2,
         programdata_lamports,
-        program_data_len * 2, // max_data_len
-    )
-        .context("Failed to create deploy instruction")?;
+        program_data_len * 2,
+    )?;
     
     // Convert to solana_sdk::Instruction
     let sdk_instructions: Vec<SdkInstruction> = deploy_instructions
@@ -380,12 +381,12 @@ async fn write_program_data_to_buffer(
         let offset = chunk_index * chunk_size;
         
         // Convert to privacy_cash::Pubkey
-        let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
-        let deployer_pubkey_pc = privacy_cash::Pubkey::from(deployer.pubkey().to_bytes());
+        let buffer_v2 = SolanaPubkeyV2::new_from_array(buffer_pubkey.to_bytes());
+        let deployer_v2 = SolanaPubkeyV2::new_from_array(deployer.pubkey().to_bytes());
         
         let write_ix = bpf_loader_upgradeable::write(
-            &buffer_pubkey_pc,
-            &deployer_pubkey_pc,
+            &buffer_v2,
+            &deployer_v2,
             offset as u32,
             chunk.to_vec(),
         );

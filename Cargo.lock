@@ -4435,6 +4435,7 @@ dependencies = [
  "privacy-cash",
  "serde",
  "serde_json",
+ "solana-address 2.0.0",
  "solana-cli-config",
  "solana-client",
  "solana-commitment-config",
