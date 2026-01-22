@@ -28,6 +28,7 @@ constant_time_eq = "=0.3.1"
 # Use exact 2.0.0 version for all Solana dependencies
 solana-cli-config = "2"
 solana-client = "2"
+solana-pubkey = "2"
 solana-program = "2"
 solana-sdk = { version = "2", features = ["full"] }
 solana-system-interface = { version = "2", features = ["bincode"] }

@@ -12,6 +12,7 @@ use solana_sdk::{
     signature::{Keypair, read_keypair_file, Signer},
     transaction::Transaction
 };
+use solana_pubkey::Pubkey as SolanaPubkeyV2;
 use std::path::{Path, PathBuf};
 
 pub fn prompt_confirmation(message: &str) -> Result<bool> {
@@ -106,12 +107,12 @@ pub async fn write_program_data_chunked(
     for (chunk_index, chunk) in program_data.chunks(chunk_size).enumerate() {
         let offset = chunk_index * chunk_size;
         
-        let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
-        let authority_pubkey_pc = privacy_cash::Pubkey::from(authority.pubkey().to_bytes());
-        
+        let buffer_pubkey_v2 = SolanaPubkeyV2::new_from_array(buffer_pubkey.to_bytes());
+        let authority_pubkey_v2 = SolanaPubkeyV2::new_from_array(authority.pubkey().to_bytes());
+
         let write_ix = bpf_loader_upgradeable::write(
-            &buffer_pubkey_pc,
-            &authority_pubkey_pc,
+            &buffer_pubkey_v2,
+            &authority_pubkey_v2,
             offset as u32,
             chunk.to_vec(),
         );
@@ -157,12 +158,12 @@ pub async fn write_program_data_chunked(
             let offset = chunk_index * chunk_size;
             let chunk = &program_data[offset..std::cmp::min(offset + chunk_size, program_data.len())];
             
-            let buffer_pubkey_pc = privacy_cash::Pubkey::from(buffer_pubkey.to_bytes());
-            let authority_pubkey_pc = privacy_cash::Pubkey::from(authority.pubkey().to_bytes());
-            
+            let buffer_pubkey_v2 = SolanaPubkeyV2::new_from_array(buffer_pubkey.to_bytes());
+            let authority_pubkey_v2 = SolanaPubkeyV2::new_from_array(authority.pubkey().to_bytes());
+
             let write_ix = bpf_loader_upgradeable::write(
-                &buffer_pubkey_pc,
-                &authority_pubkey_pc,
+                &buffer_pubkey_v2,
+                &authority_pubkey_v2,
                 offset as u32,
                 chunk.to_vec(),
             );
