@@ -51,9 +51,9 @@ shield-deploy --version
 ```
 
 **Success criteria:**
-- [ ] Installs without errors
-- [ ] Binary accessible in PATH
-- [ ] All subcommands available
+- [-] Installs without errors
+- [-] Binary accessible in PATH
+- [-] All subcommands available
 
 ---
 
@@ -81,9 +81,9 @@ solana balance
 ```
 
 **Success criteria:**
-- [ ] Mainnet-beta configured
-- [ ] Test wallet funded (0.05-0.1 SOL)
-- [ ] Balance visible
+- [-] Mainnet-beta configured
+- [-] Test wallet funded (0.05-0.1 SOL)
+- [-] Balance visible
 
 ---
 
@@ -99,11 +99,11 @@ shield-deploy init
 ```
 
 **Expected behavior:**
-- [ ] `.shield/` directory created
-- [ ] `deployer.json` file exists
-- [ ] `state.json` file exists
-- [ ] `.gitignore` updated (includes `.shield/`)
-- [ ] Success message displayed
+- [-] `.shield/` directory created
+- [-] `deployer.json` file exists
+- [-] `state.json` file exists
+- [-] `.gitignore` updated (includes `.shield/`)
+- [-] Success message displayed
 
 **Verify files:**
 ```bash
@@ -127,11 +127,11 @@ shield-deploy status
 ```
 
 **Expected output:**
-- [ ] Shows "Deployer: active"
-- [ ] Balance: 0 SOL (insufficient)
-- [ ] Programs: 0 deployed
-- [ ] Network: mainnet-beta
-- [ ] Privacy status shown
+- [-] Shows "Deployer: active"
+- [-] Balance: 0 SOL (insufficient)
+- [-] Programs: 0 deployed
+- [-] Network: mainnet-beta
+- [-] Privacy status shown
 
 ---
 
