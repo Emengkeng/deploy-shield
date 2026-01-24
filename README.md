@@ -601,6 +601,8 @@ Shield-Deploy is open source. Contributions welcome!
    - Privacy best practices guide
 
 ---
+## TODO
+[] - Add a command to fetch users burner wallet address
 
 ## FAQ
 
