@@ -17,9 +17,9 @@ cargo clippy -- -D warnings
 ```
 
 **Critical fixes needed:**
-- [ ] Replace `deploy_with_max_program_len` with `deploy` (line 313 in deploy.rs)
-- [-] Remove or suppress unused functions with `#[allow(dead_code)]`
-- [-] Auto-fix format strings: `cargo clippy --fix --allow-dirty`
+- [x] Replace `deploy_with_max_program_len` with `deploy` (line 313 in deploy.rs)
+- [x] Remove or suppress unused functions with `#[allow(dead_code)]`
+- [x] Auto-fix format strings: `cargo clippy --fix --allow-dirty`
 
 #### 1.2 Build Verification
 ```bash
@@ -35,10 +35,10 @@ ls -lh target/release/shield-deploy
 ```
 
 **Success criteria:**
-- [-] Build completes without errors
-- [-] Binary size reasonable (< 50MB)
-- [-] Help command shows all subcommands
-- [ ] Version info displays correctly
+- [x] Build completes without errors
+- [x] Binary size reasonable (< 50MB)
+- [x] Help command shows all subcommands
+- [x] Version info displays correctly
 
 #### 1.3 Install Test
 ```bash
@@ -51,9 +51,9 @@ shield-deploy --version
 ```
 
 **Success criteria:**
-- [-] Installs without errors
-- [-] Binary accessible in PATH
-- [-] All subcommands available
+- [x] Installs without errors
+- [x] Binary accessible in PATH
+- [x] All subcommands available
 
 ---
 
@@ -81,9 +81,9 @@ solana balance
 ```
 
 **Success criteria:**
-- [-] Mainnet-beta configured
-- [-] Test wallet funded (0.05-0.1 SOL)
-- [-] Balance visible
+- [x] Mainnet-beta configured
+- [x] Test wallet funded (0.05-0.1 SOL)
+- [x] Balance visible
 
 ---
 
@@ -99,11 +99,11 @@ shield-deploy init
 ```
 
 **Expected behavior:**
-- [-] `.shield/` directory created
-- [-] `deployer.json` file exists
-- [-] `state.json` file exists
-- [-] `.gitignore` updated (includes `.shield/`)
-- [-] Success message displayed
+- [x] `.shield/` directory created
+- [x] `deployer.json` file exists
+- [x] `state.json` file exists
+- [x] `.gitignore` updated (includes `.shield/`)
+- [x] Success message displayed
 
 **Verify files:**
 ```bash
@@ -467,10 +467,10 @@ shield-deploy finalize --help
 ```
 
 **Success criteria:**
-- [ ] All commands documented
-- [ ] Clear descriptions
-- [ ] Example usage shown
-- [ ] Flags/options explained
+- [x] All commands documented
+- [x] Clear descriptions
+- [x] Example usage shown
+- [x] Flags/options explained
 
 ### 4.2 Error Messages
 
