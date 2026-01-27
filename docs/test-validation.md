@@ -148,9 +148,9 @@ shield-deploy fund
 - Wallet: Use test wallet created above
 
 **Expected behavior:**
-- [ ] Prompts for amount (accepts 0.03 SOL)
-- [ ] Prompts for wallet selection
-- [ ] Shows Privacy Cash explanation
+- [x] Prompts for amount (accepts 0.03 SOL)
+- [x] Prompts for wallet selection
+- [x] Shows Privacy Cash explanation
 - [ ] Shows deposit transaction ID
 - [ ] Shows withdraw transaction ID (amount hidden)
 - [ ] 30-second privacy delay executes
