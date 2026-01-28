@@ -212,9 +212,9 @@ shield-deploy deploy --program ../test-program/target/deploy/test_program.so
 ```
 
 **Expected behavior:**
-- [ ] Detects program file
-- [ ] Shows privacy explanation
-- [ ] Prompts for confirmation
+- [x] Detects program file
+- [x] Shows privacy explanation
+- [x] Prompts for confirmation
 - [ ] Checks deployer balance (sufficient)
 - [ ] Creates buffer account
 - [ ] Writes program data (shows progress)
