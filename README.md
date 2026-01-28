@@ -93,7 +93,7 @@ cargo install --path .
 ```
 
 **Requirements:**
-- Rust 1.90+
+- Rust 1.88+
 - Solana CLI tools
 - Privacy Cash circuit files (downloaded automatically on first use)
 
@@ -601,6 +601,8 @@ Shield-Deploy is open source. Contributions welcome!
    - Privacy best practices guide
 
 ---
+## TODO
+[] - Add a command to fetch users burner wallet address
 
 ## FAQ
 

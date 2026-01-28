@@ -8,6 +8,7 @@ mod utils;
 
 #[derive(Parser)]
 #[command(name = "shield-deploy")]
+#[command(version)]
 #[command(about = "Privacy-preserving Solana program deployment", long_about = None)]
 struct Cli {
     #[command(subcommand)]
