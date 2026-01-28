@@ -22,7 +22,7 @@ use crate::config::{Config, DeployedProgram};
 use crate::utils::*;
 use crate::commands::upgrade::upgrade_program_bpf_upgradeable;
 
-const MIN_DEPLOY_BALANCE: u64 = 5_000_000_000; // 5 SOL minimum
+const MIN_DEPLOY_BALANCE: u64 = 2_000_000_000; // 2 SOL minimum
 // const MAX_PERMITTED_DATA_INCREASE: usize = 10 * 1024; // 10KB per transaction
 
 pub async fn execute(program_path: Option<String>) -> Result<()> {

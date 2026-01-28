@@ -127,11 +127,11 @@ shield-deploy status
 ```
 
 **Expected output:**
-- [-] Shows "Deployer: active"
-- [-] Balance: 0 SOL (insufficient)
-- [-] Programs: 0 deployed
-- [-] Network: mainnet-beta
-- [-] Privacy status shown
+- [x] Shows "Deployer: active"
+- [x] Balance: 0 SOL (insufficient)
+- [x] Programs: 0 deployed
+- [x] Network: mainnet-beta
+- [x] Privacy status shown
 
 ---
 
@@ -151,11 +151,11 @@ shield-deploy fund
 - [x] Prompts for amount (accepts 0.03 SOL)
 - [x] Prompts for wallet selection
 - [x] Shows Privacy Cash explanation
-- [ ] Shows deposit transaction ID
-- [ ] Shows withdraw transaction ID (amount hidden)
-- [ ] 30-second privacy delay executes
-- [ ] Success message displayed
-- [ ] Fees ~0.006 SOL as documented
+- [x] Shows deposit transaction ID
+- [x] Shows withdraw transaction ID (amount hidden)
+- [x] 30-second privacy delay executes
+- [x] Success message displayed
+- [x] Fees ~0.006 SOL as documented
 
 **Verify on-chain:**
 ```bash
