@@ -219,7 +219,7 @@ dependencies = [
 [[package]]
 name = "ark-circom"
 version = "0.1.0"
-source = "git+https://github.com/Emengkeng/deploy-shield?branch=main#f7bd5b34cc0cd7ebe3c3724ff6c2304124b16eb7"
+source = "git+https://github.com/Emengkeng/privacy-cash-rust-sdk?branch=main#f3a55aadcebd25b01fd3cca857bdf3916bc259ca"
 dependencies = [
  "ark-bn254",
  "ark-crypto-primitives",
@@ -3473,7 +3473,7 @@ dependencies = [
 [[package]]
 name = "privacy-cash"
 version = "0.1.0"
-source = "git+https://github.com/Emengkeng/deploy-shield?branch=main#f7bd5b34cc0cd7ebe3c3724ff6c2304124b16eb7"
+source = "git+https://github.com/Emengkeng/privacy-cash-rust-sdk?branch=main#f3a55aadcebd25b01fd3cca857bdf3916bc259ca"
 dependencies = [
  "aes",
  "aes-gcm",
