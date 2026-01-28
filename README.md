@@ -93,7 +93,7 @@ cargo install --path .
 ```
 
 **Requirements:**
-- Rust 1.90+
+- Rust 1.88+
 - Solana CLI tools
 - Privacy Cash circuit files (downloaded automatically on first use)
 
