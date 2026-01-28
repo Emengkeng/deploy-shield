@@ -159,13 +159,14 @@ impl PrivacyLayer {
     pub fn round_amount(amount_lamports: u64) -> u64 {
         let sol = amount_lamports as f64 / LAMPORTS_PER_SOL as f64;
         
+        let final_sol = sol.max(0.02);
         // Round to 0.1 SOL, minimum 0.02
-        let rounded_sol = if sol < 0.02 {
-            0.02
-        } else {
-            (sol * 10.0).ceil() / 10.0
-        };
+        // let rounded_sol = if sol < 0.02 {
+        //     0.02
+        // } else {
+        //     (sol * 10.0).ceil() / 10.0
+        // };
         
-        (rounded_sol * LAMPORTS_PER_SOL as f64) as u64
+        (final_sol * LAMPORTS_PER_SOL as f64) as u64
     }
 }
